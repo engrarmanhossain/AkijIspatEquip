@@ -18,6 +18,8 @@ import {
   Calendar,
   KeyRound,
   UserCheck,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import type { Employee, UserRole } from '../types';
 
@@ -29,11 +31,24 @@ export const EmployeesTab: React.FC = () => {
     openEditEmployeeModal,
     openMyProfileModal,
     deleteEmployee,
+    updateEmployee,
   } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+
+  const handlePhotoUpload = (empId: string, file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Profile photo must be under 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updateEmployee(empId, { avatarUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Filtered list
   const filteredEmployees = employees.filter((emp) => {
@@ -208,7 +223,7 @@ export const EmployeesTab: React.FC = () => {
                 {/* Header: Avatar (Photo or Initials), Name, Role */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-600 via-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-md text-sm overflow-hidden shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-600 via-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-md text-sm overflow-hidden shrink-0 relative group">
                       {emp.avatarUrl ? (
                         <img
                           src={emp.avatarUrl}
@@ -223,6 +238,24 @@ export const EmployeesTab: React.FC = () => {
                           .slice(0, 2)
                           .toUpperCase()
                       )}
+
+                      {isAdmin && (
+                        <label
+                          title="Admin: Click to upload or change profile photo"
+                          className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition text-white"
+                        >
+                          <Camera className="w-4 h-4 text-cyan-300" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePhotoUpload(emp.id, file);
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center space-x-1.5">
@@ -236,6 +269,43 @@ export const EmployeesTab: React.FC = () => {
                       <span className="text-[11px] font-mono font-semibold text-cyan-400 block">
                         {emp.employeeId}
                       </span>
+
+                      {/* Admin Quick Profile Picture Actions */}
+                      {isAdmin && (
+                        <div className="flex items-center space-x-2 mt-1 text-[10px]">
+                          <label
+                            title="Admin: Upload employee profile picture"
+                            className="text-cyan-400 hover:text-cyan-300 flex items-center space-x-1 cursor-pointer font-medium hover:underline"
+                          >
+                            <Camera className="w-3 h-3" />
+                            <span>{emp.avatarUrl ? 'Change Photo' : '+ Photo'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handlePhotoUpload(emp.id, file);
+                              }}
+                            />
+                          </label>
+
+                          {emp.avatarUrl && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Remove profile picture for ${emp.name}?`)) {
+                                  updateEmployee(emp.id, { avatarUrl: '' });
+                                }
+                              }}
+                              title="Admin: Remove employee profile picture"
+                              className="text-rose-400 hover:text-rose-300 flex items-center space-x-0.5 font-medium hover:underline"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                              <span>Remove</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
