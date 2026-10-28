@@ -36,7 +36,7 @@ const DashboardContent: React.FC = () => {
         <Navbar onOpenFaultModal={() => setIsFaultModalOpen(true)} />
 
         {/* Main Workspace Container */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {activeTab === 'overview' && <OverviewTab />}
           {activeTab === 'health' && (
             <EquipmentHealthTab onOpenFaultModal={() => setIsFaultModalOpen(true)} />
@@ -50,7 +50,7 @@ const DashboardContent: React.FC = () => {
 
       {/* Industrial Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 mt-12 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <span className="font-extrabold text-slate-300 font-mono tracking-tight">EquipGuard v2.4</span>
             <span className="text-slate-500">|</span>

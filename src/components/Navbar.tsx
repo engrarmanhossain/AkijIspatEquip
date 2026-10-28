@@ -92,12 +92,12 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
   const pendingRequestsCount = equipmentRequests.filter((r) => r.status === 'Pending').length;
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-xl">
+    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-xl">
       {/* Top Banner Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 border-b border-slate-800/60">
+      <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between min-h-[4rem] py-2 border-b border-slate-800/60 gap-3">
           {/* Logo & Plant Identity (Supports Dynamic Company Branding & Logo Change) */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 shrink-0 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400/30 overflow-hidden shrink-0">
               {companySettings.logoUrl ? (
                 <img
@@ -109,34 +109,34 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                 <Activity className="w-6 h-6 text-white" />
               )}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center space-x-2">
-                <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent">
+                <span className="text-lg sm:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-300 bg-clip-text text-transparent whitespace-nowrap">
                   {companySettings.companyName || 'EquipGuard'}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-cyan-950 text-cyan-300 border border-cyan-800/60">
+                <span className="text-[11px] px-2 py-0.5 rounded-full font-mono font-medium bg-cyan-950 text-cyan-300 border border-cyan-800/60 whitespace-nowrap shrink-0">
                   {companySettings.plantCode || 'PLANT 04'}
                 </span>
                 {isAdmin && (
                   <button
                     onClick={openCompanySettingsModal}
                     title="Change Company Name & Logo (Admin Permission)"
-                    className="p-1 rounded-md text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition"
+                    className="p-1 rounded-md text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition shrink-0"
                   >
                     <Settings className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
+              <p className="text-[11px] text-slate-400 hidden xl:block truncate max-w-xs">
                 {companySettings.tagline || 'Industrial Health Telemetry & Maintenance Register'}
               </p>
             </div>
           </div>
 
           {/* Quick Stats & Controls */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Live Clock */}
-            <div className="hidden xl:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs font-mono text-slate-300">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
+            {/* Live Clock (Displayed on 2xl screens to avoid mobile/laptop overcrowding) */}
+            <div className="hidden 2xl:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs font-mono text-slate-300 whitespace-nowrap shrink-0">
               <Clock className="w-3.5 h-3.5 text-cyan-400" />
               <span>{currentTime}</span>
             </div>
@@ -148,11 +148,11 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open Google Drive Cloud Storage (Photos & Work Proofs)"
-                className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 text-xs text-cyan-300 font-semibold transition"
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 text-xs text-cyan-300 font-semibold transition whitespace-nowrap shrink-0"
               >
-                <FolderGit2 className="w-3.5 h-3.5 text-cyan-400" />
+                <FolderGit2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <span className="hidden xl:inline">Drive</span>
-                <ExternalLink className="w-2.5 h-2.5 text-slate-500" />
+                <ExternalLink className="w-2.5 h-2.5 text-slate-500 shrink-0" />
               </a>
             )}
 
@@ -163,11 +163,11 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open Google Spreadsheet CMMS Database Ledger"
-                className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-xs text-emerald-300 font-semibold transition"
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-xs text-emerald-300 font-semibold transition whitespace-nowrap shrink-0"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span className="hidden xl:inline">Sheets DB</span>
-                <ExternalLink className="w-2.5 h-2.5 text-slate-500" />
+                <ExternalLink className="w-2.5 h-2.5 text-slate-500 shrink-0" />
               </a>
             )}
 
@@ -176,10 +176,10 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
               <button
                 onClick={openEquipmentRequestModal}
                 title="Review equipment addition & deletion approval requests"
-                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition whitespace-nowrap shrink-0"
               >
-                <FileCheck2 className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden md:inline">Requests</span>
+                <FileCheck2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span className="hidden lg:inline">Requests</span>
                 {pendingRequestsCount > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
                     {pendingRequestsCount}
@@ -192,7 +192,7 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
             <button
               onClick={toggleSimulation}
               title={isSimulating ? 'Pause telemetry stream simulation' : 'Start live telemetry stream simulation'}
-              className={`hidden sm:flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+              className={`hidden md:flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all whitespace-nowrap shrink-0 ${
                 isSimulating
                   ? 'bg-emerald-950/40 border-emerald-700/50 text-emerald-300 hover:bg-emerald-900/40'
                   : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
@@ -215,11 +215,11 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
             {/* Fault Simulator Trigger */}
             <button
               onClick={onOpenFaultModal}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-all shadow-sm"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-all shadow-sm whitespace-nowrap shrink-0"
               title="Test real-world machine failures & watch alerts trigger"
             >
-              <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span className="hidden md:inline">Simulator</span>
+              <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
+              <span className="hidden lg:inline">Simulator</span>
             </button>
 
             {/* Reset Data Button */}
@@ -230,7 +230,7 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                 }
               }}
               title="Reset all demo data to baseline"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800 transition hidden sm:block"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800 transition hidden sm:block shrink-0"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -238,18 +238,18 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
             {/* + New Work Order CTA */}
             <button
               onClick={() => openCreateWorkOrder()}
-              className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-600/30 transition-all transform active:scale-95"
+              className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-600/30 transition-all transform active:scale-95 whitespace-nowrap shrink-0"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Log Service</span>
             </button>
 
             {/* User Profile Pill & Dropdown (Supports Profile Picture Upload for Everyone) */}
             {currentUser && (
-              <div className="relative">
+              <div className="relative shrink-0">
                 <button
                   onClick={() => setUserMenuOpen((prev) => !prev)}
-                  className="flex items-center space-x-2 p-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition"
+                  className="flex items-center space-x-2 p-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition whitespace-nowrap shrink-0"
                 >
                   <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-600 to-blue-600 text-white flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
                     {currentUser.avatarUrl ? (
@@ -262,11 +262,11 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                       initials
                     )}
                   </div>
-                  <div className="text-left hidden lg:block pr-1">
-                    <span className="text-xs font-bold text-slate-200 block line-clamp-1 leading-tight">
+                  <div className="text-left hidden xl:block pr-1 max-w-[130px]">
+                    <span className="text-xs font-bold text-slate-200 block truncate leading-tight whitespace-nowrap">
                       {currentUser.name}
                     </span>
-                    <span className="text-[10px] font-mono text-cyan-400 block leading-tight">
+                    <span className="text-[10px] font-mono text-cyan-400 block leading-tight whitespace-nowrap">
                       {currentUser.role === 'admin'
                         ? 'Admin'
                         : currentUser.role === 'manager'
@@ -276,7 +276,7 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                         : 'Technician'}
                     </span>
                   </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 </button>
 
                 {/* Dropdown Menu */}
