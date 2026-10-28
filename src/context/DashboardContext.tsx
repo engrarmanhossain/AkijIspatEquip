@@ -1,0 +1,818 @@
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import type {
+  Equipment,
+  MaintenanceRecord,
+  TroubleshootingGuide,
+  AlertItem,
+  ReliabilityStats,
+  MaintenanceStatus,
+  PriorityLevel,
+  MaintenanceType,
+  EquipmentTelemetry,
+  EquipmentRequest,
+  WorkProgressUpdate,
+} from '../types';
+import {
+  INITIAL_EQUIPMENT,
+  INITIAL_ALERTS,
+  INITIAL_MAINTENANCE_RECORDS,
+  INITIAL_TROUBLESHOOTING_GUIDES,
+  INITIAL_EQUIPMENT_REQUESTS,
+} from '../data/mockData';
+
+interface DashboardContextType {
+  equipmentList: Equipment[];
+  equipmentRequests: EquipmentRequest[];
+  maintenanceRecords: MaintenanceRecord[];
+  troubleshootingGuides: TroubleshootingGuide[];
+  alerts: AlertItem[];
+  selectedEquipmentId: string;
+  selectedEquipment: Equipment | undefined;
+  activeTab: 'overview' | 'health' | 'troubleshoot' | 'register' | 'analytics' | 'employees';
+  searchQuery: string;
+  isSimulating: boolean;
+  activeDiagnosticFaultCode: string | null;
+  activeWorkOrderModal: boolean;
+  editingWorkOrder: MaintenanceRecord | null;
+  addEquipmentModalOpen: boolean;
+  workUpdateModalOpen: boolean;
+  equipmentForWorkUpdate: Equipment | null;
+  equipmentRequestModalOpen: boolean;
+  stats: ReliabilityStats;
+
+  // Actions
+  setActiveTab: (tab: 'overview' | 'health' | 'troubleshoot' | 'register' | 'analytics' | 'employees') => void;
+  setSelectedEquipmentId: (id: string) => void;
+  setSearchQuery: (query: string) => void;
+  toggleSimulation: () => void;
+  acknowledgeAlert: (alertId: string) => void;
+  clearAlert: (alertId: string) => void;
+  injectFault: (equipmentId: string, faultType: 'bearing_vibration' | 'thermal_runaway' | 'pressure_drop' | 'motor_overload') => void;
+  resetEquipmentToNominal: (equipmentId: string) => void;
+  openCreateWorkOrder: (initialData?: Partial<MaintenanceRecord>) => void;
+  openEditWorkOrder: (record: MaintenanceRecord) => void;
+  closeWorkOrderModal: () => void;
+  saveWorkOrder: (record: Partial<MaintenanceRecord>) => void;
+  deleteMaintenanceRecord: (id: string) => void;
+  updateMaintenanceStatus: (id: string, status: MaintenanceStatus) => void;
+  startTroubleshootForEquipment: (equipmentId: string, faultCode?: string) => void;
+
+  // Equipment Actions
+  addEquipmentDirect: (data: Partial<Equipment>) => void;
+  deleteEquipmentDirect: (id: string) => void;
+  submitEquipmentRequest: (req: Omit<EquipmentRequest, 'id' | 'requestDate' | 'status'>) => void;
+  approveEquipmentRequest: (requestId: string, reviewedBy: string, reviewNotes?: string) => void;
+  rejectEquipmentRequest: (requestId: string, reviewedBy: string, reviewNotes?: string) => void;
+  uploadEquipmentPicture: (equipmentId: string, imageUrl: string) => void;
+  addWorkProgressUpdate: (equipmentId: string, update: Omit<WorkProgressUpdate, 'id' | 'timestamp'>) => void;
+  openAddEquipmentModal: () => void;
+  closeAddEquipmentModal: () => void;
+  openWorkUpdateModal: (equipment: Equipment) => void;
+  closeWorkUpdateModal: () => void;
+  openEquipmentRequestModal: () => void;
+  closeEquipmentRequestModal: () => void;
+
+  resetAllDataToDefaults: () => void;
+  exportRecordsToCSV: () => void;
+  exportRecordsToJSON: () => void;
+}
+
+const STORAGE_KEYS = {
+  EQUIPMENT: 'equipguard_equipment_v2',
+  EQUIPMENT_REQUESTS: 'equipguard_equipment_requests_v2',
+  RECORDS: 'equipguard_records_v2',
+  ALERTS: 'equipguard_alerts_v2',
+};
+
+const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
+
+export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.EQUIPMENT);
+      return saved ? JSON.parse(saved) : INITIAL_EQUIPMENT;
+    } catch {
+      return INITIAL_EQUIPMENT;
+    }
+  });
+
+  const [equipmentRequests, setEquipmentRequests] = useState<EquipmentRequest[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.EQUIPMENT_REQUESTS);
+      return saved ? JSON.parse(saved) : (INITIAL_EQUIPMENT_REQUESTS as EquipmentRequest[]);
+    } catch {
+      return INITIAL_EQUIPMENT_REQUESTS as EquipmentRequest[];
+    }
+  });
+
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.RECORDS);
+      return saved ? JSON.parse(saved) : INITIAL_MAINTENANCE_RECORDS;
+    } catch {
+      return INITIAL_MAINTENANCE_RECORDS;
+    }
+  });
+
+  const [alerts, setAlerts] = useState<AlertItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ALERTS);
+      return saved ? JSON.parse(saved) : INITIAL_ALERTS;
+    } catch {
+      return INITIAL_ALERTS;
+    }
+  });
+
+  const [troubleshootingGuides] = useState<TroubleshootingGuide[]>(INITIAL_TROUBLESHOOTING_GUIDES);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>(INITIAL_EQUIPMENT[0].id);
+  const [activeTab, setActiveTab] = useState<'overview' | 'health' | 'troubleshoot' | 'register' | 'analytics' | 'employees'>('overview');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSimulating, setIsSimulating] = useState<boolean>(true);
+  const [activeDiagnosticFaultCode, setActiveDiagnosticFaultCode] = useState<string | null>(null);
+
+  // Modal states
+  const [activeWorkOrderModal, setActiveWorkOrderModal] = useState<boolean>(false);
+  const [editingWorkOrder, setEditingWorkOrder] = useState<MaintenanceRecord | null>(null);
+  const [addEquipmentModalOpen, setAddEquipmentModalOpen] = useState<boolean>(false);
+  const [workUpdateModalOpen, setWorkUpdateModalOpen] = useState<boolean>(false);
+  const [equipmentForWorkUpdate, setEquipmentForWorkUpdate] = useState<Equipment | null>(null);
+  const [equipmentRequestModalOpen, setEquipmentRequestModalOpen] = useState<boolean>(false);
+
+  // Sync to LocalStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENT, JSON.stringify(equipmentList));
+    } catch (e) {
+      console.warn('LocalStorage save failed', e);
+    }
+  }, [equipmentList]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENT_REQUESTS, JSON.stringify(equipmentRequests));
+    } catch (e) {
+      console.warn('LocalStorage save failed', e);
+    }
+  }, [equipmentRequests]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(maintenanceRecords));
+    } catch (e) {
+      console.warn('LocalStorage save failed', e);
+    }
+  }, [maintenanceRecords]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ALERTS, JSON.stringify(alerts));
+    } catch (e) {
+      console.warn('LocalStorage save failed', e);
+    }
+  }, [alerts]);
+
+  const selectedEquipment = useMemo(() => {
+    return equipmentList.find((eq) => eq.id === selectedEquipmentId) || equipmentList[0];
+  }, [equipmentList, selectedEquipmentId]);
+
+  // Compute Reliability KPIs
+  const stats = useMemo<ReliabilityStats>(() => {
+    const total = equipmentList.length;
+    const healthyCount = equipmentList.filter((e) => e.status === 'healthy').length;
+    const warningCount = equipmentList.filter((e) => e.status === 'warning').length;
+    const criticalCount = equipmentList.filter((e) => e.status === 'critical').length;
+    const maintenanceCount = equipmentList.filter((e) => e.status === 'maintenance').length;
+
+    const rawAvailability = total > 0 
+      ? ((healthyCount * 100 + warningCount * 88 + criticalCount * 45 + maintenanceCount * 50) / total) 
+      : 96.5;
+    const operationalAvailability = Number(rawAvailability.toFixed(1));
+
+    const totalMTBF = equipmentList.reduce((acc, eq) => acc + eq.mtbfHours, 0);
+    const plantMTBF = Math.round(totalMTBF / (total || 1));
+
+    const totalMTTR = equipmentList.reduce((acc, eq) => acc + eq.mttrHours, 0);
+    const plantMTTR = Number((totalMTTR / (total || 1)).toFixed(1));
+
+    const totalDowntimeThisMonth = maintenanceRecords.reduce((acc, rec) => acc + (rec.downtimeHours || 0), 0);
+    const totalMaintenanceCostYTD = maintenanceRecords.reduce((acc, rec) => acc + (rec.cost?.totalCost || 0), 0);
+
+    const activeAlertsCount = alerts.filter((a) => !a.acknowledged).length;
+
+    return {
+      operationalAvailability,
+      totalEquipment: total,
+      healthyCount,
+      warningCount,
+      criticalCount,
+      maintenanceCount,
+      plantMTBF,
+      plantMTTR,
+      totalDowntimeThisMonth: Number(totalDowntimeThisMonth.toFixed(1)),
+      totalMaintenanceCostYTD,
+      activeAlertsCount,
+    };
+  }, [equipmentList, maintenanceRecords, alerts]);
+
+  // Telemetry Simulation Loop
+  useEffect(() => {
+    if (!isSimulating) return;
+
+    const interval = setInterval(() => {
+      const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      setEquipmentList((prevList) =>
+        prevList.map((eq) => {
+          if (eq.status === 'maintenance' || eq.status === 'offline') {
+            return eq;
+          }
+
+          const updatedTelemetry: EquipmentTelemetry = { ...eq.telemetry };
+          let penaltyScore = 0;
+
+          if (updatedTelemetry.vibration) {
+            const vib = updatedTelemetry.vibration;
+            const delta = (Math.random() - 0.48) * 0.18;
+            const newVal = Math.max(0.1, Number((vib.value + delta).toFixed(2)));
+            const newHistory = [...(vib.history || []).slice(1), { timestamp: nowTime, val: newVal }];
+            updatedTelemetry.vibration = { ...vib, value: newVal, history: newHistory };
+
+            if (newVal >= vib.criticalThreshold) penaltyScore += 35;
+            else if (newVal >= vib.warningThreshold) penaltyScore += 18;
+          }
+
+          if (updatedTelemetry.temperature) {
+            const temp = updatedTelemetry.temperature;
+            const delta = (Math.random() - 0.47) * 0.4;
+            const newVal = Math.max(20, Number((temp.value + delta).toFixed(1)));
+            const newHistory = [...(temp.history || []).slice(1), { timestamp: nowTime, val: newVal }];
+            updatedTelemetry.temperature = { ...temp, value: newVal, history: newHistory };
+
+            if (newVal >= temp.criticalThreshold) penaltyScore += 40;
+            else if (newVal >= temp.warningThreshold) penaltyScore += 20;
+          }
+
+          if (updatedTelemetry.pressure) {
+            const press = updatedTelemetry.pressure;
+            const delta = (Math.random() - 0.5) * 0.1;
+            const newVal = Math.max(0, Number((press.value + delta).toFixed(2)));
+            const newHistory = [...(press.history || []).slice(1), { timestamp: nowTime, val: newVal }];
+            updatedTelemetry.pressure = { ...press, value: newVal, history: newHistory };
+
+            if (newVal <= press.criticalThreshold) penaltyScore += 25;
+            else if (newVal <= press.warningThreshold) penaltyScore += 12;
+          }
+
+          if (updatedTelemetry.motorLoad) {
+            const load = updatedTelemetry.motorLoad;
+            const delta = (Math.random() - 0.5) * 1.5;
+            const newVal = Math.max(0, Math.min(load.max, Number((load.value + delta).toFixed(1))));
+            const newHistory = [...(load.history || []).slice(1), { timestamp: nowTime, val: newVal }];
+            updatedTelemetry.motorLoad = { ...load, value: newVal, history: newHistory };
+
+            if (newVal >= load.criticalThreshold) penaltyScore += 20;
+          }
+
+          const newHealthScore = Math.max(10, Math.min(100, Math.round(100 - penaltyScore)));
+          let computedStatus = eq.status;
+          if (newHealthScore < 50) computedStatus = 'critical';
+          else if (newHealthScore < 75) computedStatus = 'warning';
+          else computedStatus = 'healthy';
+
+          return {
+            ...eq,
+            healthScore: newHealthScore,
+            status: computedStatus,
+            telemetry: updatedTelemetry,
+          };
+        })
+      );
+    }, 2800);
+
+    return () => clearInterval(interval);
+  }, [isSimulating]);
+
+  // Alert management
+  const acknowledgeAlert = (alertId: string) => {
+    setAlerts((prev) =>
+      prev.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a))
+    );
+  };
+
+  const clearAlert = (alertId: string) => {
+    setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+  };
+
+  // Fault Injection simulation
+  const injectFault = (equipmentId: string, faultType: 'bearing_vibration' | 'thermal_runaway' | 'pressure_drop' | 'motor_overload') => {
+    const timestamp = 'Just now';
+
+    setEquipmentList((prev) =>
+      prev.map((eq) => {
+        if (eq.id !== equipmentId) return eq;
+
+        const updatedTelemetry: EquipmentTelemetry = { ...eq.telemetry };
+        let newAlertMsg = '';
+        let errorCode = '';
+
+        if (faultType === 'bearing_vibration' && updatedTelemetry.vibration) {
+          const spiked = Number((updatedTelemetry.vibration.criticalThreshold * 1.15).toFixed(2));
+          updatedTelemetry.vibration = {
+            ...updatedTelemetry.vibration,
+            value: spiked,
+            history: [...updatedTelemetry.vibration.history.slice(1), { timestamp: 'Now', val: spiked }],
+          };
+          newAlertMsg = `Severe bearing vibration spike (${spiked} mm/s) on ${eq.name}! Immediate inspection required.`;
+          errorCode = 'ERR-VIB-01';
+        } else if (faultType === 'thermal_runaway' && updatedTelemetry.temperature) {
+          const spiked = Number((updatedTelemetry.temperature.criticalThreshold * 1.1).toFixed(1));
+          updatedTelemetry.temperature = {
+            ...updatedTelemetry.temperature,
+            value: spiked,
+            history: [...updatedTelemetry.temperature.history.slice(1), { timestamp: 'Now', val: spiked }],
+          };
+          newAlertMsg = `Thermal runaway alert! Core temperature surged to ${spiked}°C on ${eq.name}.`;
+          errorCode = 'ERR-TMP-03';
+        } else if (faultType === 'pressure_drop' && updatedTelemetry.pressure) {
+          const dropped = Number((updatedTelemetry.pressure.criticalThreshold * 0.75).toFixed(2));
+          updatedTelemetry.pressure = {
+            ...updatedTelemetry.pressure,
+            value: dropped,
+            history: [...updatedTelemetry.pressure.history.slice(1), { timestamp: 'Now', val: dropped }],
+          };
+          newAlertMsg = `System pressure collapse (${dropped} bar) on ${eq.name}! Burst line hazard.`;
+          errorCode = 'ERR-PRS-04';
+        } else if (faultType === 'motor_overload' && updatedTelemetry.motorLoad) {
+          const spiked = Number((updatedTelemetry.motorLoad.criticalThreshold * 1.08).toFixed(1));
+          updatedTelemetry.motorLoad = {
+            ...updatedTelemetry.motorLoad,
+            value: spiked,
+            history: [...updatedTelemetry.motorLoad.history.slice(1), { timestamp: 'Now', val: spiked }],
+          };
+          newAlertMsg = `Motor current draw overload (${spiked} ${updatedTelemetry.motorLoad.unit}) on ${eq.name}!`;
+          errorCode = 'ERR-MTR-01';
+        }
+
+        if (newAlertMsg) {
+          const newAlert: AlertItem = {
+            id: `ALT-${Date.now().toString().slice(-4)}`,
+            equipmentId: eq.id,
+            equipmentName: eq.name,
+            severity: 'critical',
+            code: errorCode,
+            message: newAlertMsg,
+            timestamp,
+            acknowledged: false,
+          };
+          setAlerts((curr) => [newAlert, ...curr]);
+        }
+
+        return {
+          ...eq,
+          status: 'critical',
+          healthScore: Math.floor(Math.random() * 20) + 25,
+          telemetry: updatedTelemetry,
+        };
+      })
+    );
+  };
+
+  const resetEquipmentToNominal = (equipmentId: string) => {
+    const original = INITIAL_EQUIPMENT.find((e) => e.id === equipmentId);
+    if (!original) return;
+
+    setEquipmentList((prev) =>
+      prev.map((eq) => (eq.id === equipmentId ? JSON.parse(JSON.stringify(original)) : eq))
+    );
+  };
+
+  // Direct Add Equipment (Managers & Admin)
+  const addEquipmentDirect = (data: Partial<Equipment>) => {
+    const newId = `EQ-${(data.category || 'MCH').toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    const newTag = data.tag || `MCH-${Math.floor(100 + Math.random() * 900)}`;
+    const fullEquipment: Equipment = {
+      id: newId,
+      name: data.name || 'New Industrial Machine',
+      tag: newTag,
+      category: data.category || 'Pump',
+      location: data.location || 'Plant Floor — Zone 1',
+      manufacturer: data.manufacturer || 'Industrial Equipment OEM',
+      model: data.model || 'Model X-100',
+      serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
+      installationDate: data.installationDate || new Date().toISOString().slice(0, 10),
+      healthScore: 100,
+      status: 'healthy',
+      operatingHours: data.operatingHours || 0,
+      lastMaintenanceDate: new Date().toISOString().slice(0, 10),
+      nextScheduledService: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      criticality: data.criticality || 'Medium',
+      mtbfHours: data.mtbfHours || 950,
+      mttrHours: data.mttrHours || 3.5,
+      imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
+      workUpdates: [
+        {
+          id: `WU-${Date.now().toString().slice(-4)}`,
+          equipmentId: newId,
+          equipmentName: data.name || 'New Industrial Machine',
+          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+          technicianName: 'Plant Commissioning Team',
+          technicianRole: 'Management Authorization',
+          title: 'Asset Commissioned & Baseline Enrolled',
+          description: 'Machinery installed and integrated into real-time health telemetry monitoring.',
+          progressPercent: 100,
+          status: 'Returned to Service',
+        },
+      ],
+      telemetry: {
+        vibration: {
+          name: 'Main Axis Vibration',
+          value: 1.4,
+          unit: 'mm/s RMS',
+          min: 0,
+          max: 10,
+          warningThreshold: 4.0,
+          criticalThreshold: 6.5,
+          history: [
+            { timestamp: '10:00', val: 1.4 },
+            { timestamp: '10:05', val: 1.4 },
+          ],
+        },
+        temperature: {
+          name: 'Core Housing Temp',
+          value: 48.0,
+          unit: '°C',
+          min: 20,
+          max: 110,
+          warningThreshold: 75.0,
+          criticalThreshold: 90.0,
+          history: [
+            { timestamp: '10:00', val: 47.5 },
+            { timestamp: '10:05', val: 48.0 },
+          ],
+        },
+      },
+    };
+
+    setEquipmentList((prev) => [fullEquipment, ...prev]);
+    setSelectedEquipmentId(newId);
+  };
+
+  // Direct Delete Equipment (Managers & Admin)
+  const deleteEquipmentDirect = (id: string) => {
+    setEquipmentList((prev) => prev.filter((eq) => eq.id !== id));
+    if (selectedEquipmentId === id) {
+      const remaining = equipmentList.filter((eq) => eq.id !== id);
+      if (remaining.length > 0) setSelectedEquipmentId(remaining[0].id);
+    }
+  };
+
+  // Submit Request (Lower-level management)
+  const submitEquipmentRequest = (req: Omit<EquipmentRequest, 'id' | 'requestDate' | 'status'>) => {
+    const newReq: EquipmentRequest = {
+      ...req,
+      id: `REQ-EQ-${Math.floor(100 + Math.random() * 900)}`,
+      requestDate: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      status: 'Pending',
+    };
+    setEquipmentRequests((prev) => [newReq, ...prev]);
+
+    const newAlert: AlertItem = {
+      id: `ALT-REQ-${Date.now().toString().slice(-4)}`,
+      equipmentId: req.equipmentId || 'SYSTEM',
+      equipmentName: req.equipmentName,
+      severity: 'warning',
+      code: 'REQ-APPROVAL',
+      message: `Equipment ${req.type.toUpperCase()} request submitted by ${req.requestedBy} (${req.requestedByRole}) — Pending Manager or Assistant Manager Approval.`,
+      timestamp: 'Just now',
+      acknowledged: false,
+    };
+    setAlerts((prev) => [newAlert, ...prev]);
+  };
+
+  // Approve Request (Managers & Admin)
+  const approveEquipmentRequest = (requestId: string, reviewedBy: string, reviewNotes?: string) => {
+    const target = equipmentRequests.find((r) => r.id === requestId);
+    if (!target) return;
+
+    if (target.type === 'add' && target.equipmentData) {
+      addEquipmentDirect(target.equipmentData);
+    } else if (target.type === 'delete' && target.equipmentId) {
+      deleteEquipmentDirect(target.equipmentId);
+    }
+
+    setEquipmentRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId
+          ? {
+              ...r,
+              status: 'Approved',
+              reviewedBy,
+              reviewDate: new Date().toISOString().replace('T', ' ').slice(0, 16),
+              reviewNotes: reviewNotes || 'Authorized and executed by Manager.',
+            }
+          : r
+      )
+    );
+  };
+
+  // Reject Request (Managers & Admin)
+  const rejectEquipmentRequest = (requestId: string, reviewedBy: string, reviewNotes?: string) => {
+    setEquipmentRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId
+          ? {
+              ...r,
+              status: 'Rejected',
+              reviewedBy,
+              reviewDate: new Date().toISOString().replace('T', ' ').slice(0, 16),
+              reviewNotes: reviewNotes || 'Request rejected by Manager.',
+            }
+          : r
+      )
+    );
+  };
+
+  // Upload Equipment Picture
+  const uploadEquipmentPicture = (equipmentId: string, imageUrl: string) => {
+    setEquipmentList((prev) =>
+      prev.map((eq) => (eq.id === equipmentId ? { ...eq, imageUrl } : eq))
+    );
+  };
+
+  // Add Work Progress Update
+  const addWorkProgressUpdate = (equipmentId: string, update: Omit<WorkProgressUpdate, 'id' | 'timestamp'>) => {
+    const newUpdate: WorkProgressUpdate = {
+      ...update,
+      id: `WU-${Date.now().toString().slice(-5)}`,
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    };
+
+    setEquipmentList((prev) =>
+      prev.map((eq) => {
+        if (eq.id !== equipmentId) return eq;
+        const currentUpdates = eq.workUpdates || [];
+        return {
+          ...eq,
+          workUpdates: [newUpdate, ...currentUpdates],
+        };
+      })
+    );
+  };
+
+  // Work order management
+  const openCreateWorkOrder = (initialData?: Partial<MaintenanceRecord>) => {
+    if (initialData) {
+      setEditingWorkOrder(initialData as MaintenanceRecord);
+    } else {
+      setEditingWorkOrder(null);
+    }
+    setActiveWorkOrderModal(true);
+  };
+
+  const openEditWorkOrder = (record: MaintenanceRecord) => {
+    setEditingWorkOrder(record);
+    setActiveWorkOrderModal(true);
+  };
+
+  const closeWorkOrderModal = () => {
+    setActiveWorkOrderModal(false);
+    setEditingWorkOrder(null);
+  };
+
+  const saveWorkOrder = (data: Partial<MaintenanceRecord>) => {
+    if (editingWorkOrder && editingWorkOrder.id) {
+      setMaintenanceRecords((prev) =>
+        prev.map((rec) =>
+          rec.id === editingWorkOrder.id
+            ? ({
+                ...rec,
+                ...data,
+                cost: {
+                  partsCost: data.cost?.partsCost ?? rec.cost.partsCost,
+                  laborCost: data.cost?.laborCost ?? rec.cost.laborCost,
+                  totalCost:
+                    (data.cost?.partsCost ?? rec.cost.partsCost) +
+                    (data.cost?.laborCost ?? rec.cost.laborCost),
+                },
+              } as MaintenanceRecord)
+            : rec
+        )
+      );
+    } else {
+      const targetEq = equipmentList.find((e) => e.id === data.equipmentId) || equipmentList[0];
+      const newId = `WO-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+
+      const partsCost = data.partsReplaced?.reduce((s, p) => s + p.quantity * p.unitCost, 0) || 0;
+      const laborCost = data.cost?.laborCost || 250;
+
+      const newRecord: MaintenanceRecord = {
+        id: newId,
+        equipmentId: targetEq.id,
+        equipmentName: targetEq.name,
+        title: data.title || 'Corrective Equipment Maintenance',
+        type: data.type || 'Corrective',
+        status: data.status || 'Scheduled',
+        priority: data.priority || 'Medium',
+        technician: data.technician || 'Marcus Vance (Lead Mechanical)',
+        reportedDate: nowStr,
+        scheduledDate: data.scheduledDate || nowStr,
+        completedDate: data.status === 'Completed' ? nowStr : undefined,
+        downtimeHours: data.downtimeHours || 2.0,
+        cost: {
+          partsCost,
+          laborCost,
+          totalCost: partsCost + laborCost,
+        },
+        partsReplaced: data.partsReplaced || [],
+        rootCause: data.rootCause || 'Identified via telemetry diagnostics',
+        troubleshootProcedure: data.troubleshootProcedure || '',
+        actionTaken: data.actionTaken || '',
+        notes: data.notes || '',
+        signOffBy: data.signOffBy || 'Assigned Technician',
+      };
+
+      setMaintenanceRecords((prev) => [newRecord, ...prev]);
+    }
+    closeWorkOrderModal();
+  };
+
+  const deleteMaintenanceRecord = (id: string) => {
+    setMaintenanceRecords((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const updateMaintenanceStatus = (id: string, status: MaintenanceStatus) => {
+    setMaintenanceRecords((prev) =>
+      prev.map((rec) => {
+        if (rec.id !== id) return rec;
+        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+        return {
+          ...rec,
+          status,
+          completedDate: status === 'Completed' && !rec.completedDate ? nowStr : rec.completedDate,
+        };
+      })
+    );
+  };
+
+  const startTroubleshootForEquipment = (equipmentId: string, faultCode?: string) => {
+    setSelectedEquipmentId(equipmentId);
+    if (faultCode) {
+      setActiveDiagnosticFaultCode(faultCode);
+    }
+    setActiveTab('troubleshoot');
+  };
+
+  const openAddEquipmentModal = () => setAddEquipmentModalOpen(true);
+  const closeAddEquipmentModal = () => setAddEquipmentModalOpen(false);
+
+  const openWorkUpdateModal = (equipment: Equipment) => {
+    setEquipmentForWorkUpdate(equipment);
+    setWorkUpdateModalOpen(true);
+  };
+  const closeWorkUpdateModal = () => {
+    setEquipmentForWorkUpdate(null);
+    setWorkUpdateModalOpen(false);
+  };
+
+  const openEquipmentRequestModal = () => setEquipmentRequestModalOpen(true);
+  const closeEquipmentRequestModal = () => setEquipmentRequestModalOpen(false);
+
+  const resetAllDataToDefaults = () => {
+    setEquipmentList(INITIAL_EQUIPMENT);
+    setEquipmentRequests(INITIAL_EQUIPMENT_REQUESTS as EquipmentRequest[]);
+    setMaintenanceRecords(INITIAL_MAINTENANCE_RECORDS);
+    setAlerts(INITIAL_ALERTS);
+    localStorage.removeItem(STORAGE_KEYS.EQUIPMENT);
+    localStorage.removeItem(STORAGE_KEYS.EQUIPMENT_REQUESTS);
+    localStorage.removeItem(STORAGE_KEYS.RECORDS);
+    localStorage.removeItem(STORAGE_KEYS.ALERTS);
+  };
+
+  const exportRecordsToCSV = () => {
+    const headers = [
+      'Work Order ID',
+      'Equipment ID',
+      'Equipment Name',
+      'Title',
+      'Type',
+      'Status',
+      'Priority',
+      'Technician',
+      'Reported Date',
+      'Scheduled Date',
+      'Completed Date',
+      'Downtime (Hours)',
+      'Parts Cost ($)',
+      'Labor Cost ($)',
+      'Total Cost ($)',
+      'Root Cause',
+    ];
+
+    const rows = maintenanceRecords.map((r) => [
+      `"${r.id}"`,
+      `"${r.equipmentId}"`,
+      `"${r.equipmentName}"`,
+      `"${r.title.replace(/"/g, '""')}"`,
+      `"${r.type}"`,
+      `"${r.status}"`,
+      `"${r.priority}"`,
+      `"${r.technician}"`,
+      `"${r.reportedDate}"`,
+      `"${r.scheduledDate}"`,
+      `"${r.completedDate || ''}"`,
+      r.downtimeHours,
+      r.cost.partsCost,
+      r.cost.laborCost,
+      r.cost.totalCost,
+      `"${(r.rootCause || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Maintenance_Register_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportRecordsToJSON = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(maintenanceRecords, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `Maintenance_Register_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  return (
+    <DashboardContext.Provider
+      value={{
+        equipmentList,
+        equipmentRequests,
+        maintenanceRecords,
+        troubleshootingGuides,
+        alerts,
+        selectedEquipmentId,
+        selectedEquipment,
+        activeTab,
+        searchQuery,
+        isSimulating,
+        activeDiagnosticFaultCode,
+        activeWorkOrderModal,
+        editingWorkOrder,
+        addEquipmentModalOpen,
+        workUpdateModalOpen,
+        equipmentForWorkUpdate,
+        equipmentRequestModalOpen,
+        stats,
+        setActiveTab,
+        setSelectedEquipmentId,
+        setSearchQuery,
+        toggleSimulation: () => setIsSimulating((prev) => !prev),
+        acknowledgeAlert,
+        clearAlert,
+        injectFault,
+        resetEquipmentToNominal,
+        openCreateWorkOrder,
+        openEditWorkOrder,
+        closeWorkOrderModal,
+        saveWorkOrder,
+        deleteMaintenanceRecord,
+        updateMaintenanceStatus,
+        startTroubleshootForEquipment,
+
+        addEquipmentDirect,
+        deleteEquipmentDirect,
+        submitEquipmentRequest,
+        approveEquipmentRequest,
+        rejectEquipmentRequest,
+        uploadEquipmentPicture,
+        addWorkProgressUpdate,
+        openAddEquipmentModal,
+        closeAddEquipmentModal,
+        openWorkUpdateModal,
+        closeWorkUpdateModal,
+        openEquipmentRequestModal,
+        closeEquipmentRequestModal,
+
+        resetAllDataToDefaults,
+        exportRecordsToCSV,
+        exportRecordsToJSON,
+      }}
+    >
+      {children}
+    </DashboardContext.Provider>
+  );
+};
+
+export const useDashboard = () => {
+  const context = useContext(DashboardContext);
+  if (!context) {
+    throw new Error('useDashboard must be used within a DashboardProvider');
+  }
+  return context;
+};
