@@ -30,9 +30,13 @@ const DashboardContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
-      {/* Sticky Navigation Bar */}
-      <div>
+    <div className="min-h-screen bg-[#0a0f1d] text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-white relative overflow-x-hidden font-sans">
+      {/* Modern Ambient Radial Glow for Premium Enterprise Feel */}
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(14,165,233,0.10),rgba(255,255,255,0))] z-0"></div>
+      <div className="fixed bottom-0 right-0 w-[500px] h-[500px] pointer-events-none bg-[radial-gradient(circle_at_bottom_right,rgba(99,102,241,0.07),transparent_70%)] z-0"></div>
+
+      {/* Sticky Navigation Bar & Main Content */}
+      <div className="relative z-10">
         <Navbar onOpenFaultModal={() => setIsFaultModalOpen(true)} />
 
         {/* Main Workspace Container */}

@@ -146,13 +146,16 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
   return (
     <div className="space-y-6">
       {/* Top Header & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl glass-panel shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
         <div>
-          <div className="flex items-center space-x-2">
-            <Factory className="w-5 h-5 text-cyan-400" />
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+              <Factory className="w-4 h-4" />
+            </div>
             <h2 className="text-base font-bold text-white">Machinery Telemetry & Health Diagnostics</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-1">
             Real-time condition monitoring, work updates, and asset lifecycle controls.
           </p>
         </div>
@@ -165,7 +168,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
               href={companySettings.googleDriveFolderUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold border border-slate-700 flex items-center space-x-1.5 transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-cyan-300 text-xs font-semibold border border-slate-800 hover:border-cyan-500/40 flex items-center space-x-1.5 transition shadow-sm"
               title="Open Google Drive Cloud Storage for machinery photos"
             >
               <FolderGit2 className="w-4 h-4 text-cyan-400" />
@@ -178,7 +181,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
           {(isManager || isAdmin) && (
             <button
               onClick={openEquipmentRequestModal}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center space-x-1.5 transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-800 hover:border-slate-700 flex items-center space-x-1.5 transition shadow-sm"
               title="Review equipment addition & deletion requests submitted by junior management"
             >
               <FileCheck2 className="w-4 h-4 text-cyan-400" />
@@ -194,7 +197,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
           {/* Add Equipment Action */}
           <button
             onClick={openAddEquipmentModal}
-            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-600/30 flex items-center space-x-1.5 transition transform active:scale-95"
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-600/25 flex items-center space-x-1.5 transition transform active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
             <span>
@@ -217,10 +220,10 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
               <button
                 key={cat}
                 onClick={() => setFilterCategory(cat)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition ${
                   filterCategory === cat
-                    ? 'bg-cyan-500 text-slate-950 font-bold'
-                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                    : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800/80'
                 }`}
               >
                 {cat}
@@ -237,29 +240,29 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
               <button
                 key={eq.id}
                 onClick={() => setSelectedEquipmentId(eq.id)}
-                className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
+                className={`p-3 rounded-2xl border text-left transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
                   isSelected
-                    ? 'bg-slate-800 border-cyan-500 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-500/50'
-                    : 'bg-slate-900/80 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
+                    ? 'bg-slate-800/90 border-cyan-500 shadow-xl shadow-cyan-500/15 ring-1 ring-cyan-500/60'
+                    : 'glass-card-subtle hover:border-slate-700/80 hover:bg-slate-850/60'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-[11px] font-bold text-cyan-400">{eq.tag}</span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-mono text-[11px] font-bold text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-800/60">{eq.tag}</span>
                   <span
                     className={`w-2 h-2 rounded-full ${
                       eq.status === 'healthy'
-                        ? 'bg-emerald-400'
+                        ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
                         : eq.status === 'warning'
-                        ? 'bg-amber-400'
-                        : 'bg-rose-400 animate-ping'
+                        ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]'
+                        : 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.7)] animate-pulse'
                     }`}
                   ></span>
                 </div>
-                <span className="text-xs font-semibold text-slate-200 line-clamp-1 block">{eq.name}</span>
-                <div className="mt-2 flex items-center justify-between text-[11px]">
+                <span className="text-xs font-bold text-slate-100 line-clamp-1 block">{eq.name}</span>
+                <div className="mt-2.5 flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-800/60">
                   <span className="text-slate-400">Score:</span>
                   <span
-                    className={`font-mono font-bold ${
+                    className={`font-mono font-extrabold ${
                       eq.healthScore >= 80 ? 'text-emerald-400' : eq.healthScore >= 60 ? 'text-amber-400' : 'text-rose-400'
                     }`}
                   >
@@ -273,17 +276,18 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
       </div>
 
       {/* Selected Asset Comprehensive Health Banner with Equipment Picture */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 shadow-xl space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+      <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-2xl space-y-6 relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-800/80">
           {/* Asset Identity with Picture */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             {/* Equipment Image & Uploader */}
-            <div className="relative group w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden shadow-xl shrink-0">
+            <div className="relative group w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-slate-950 border border-slate-800/90 overflow-hidden shadow-2xl shrink-0 ring-1 ring-white/10 group-hover:ring-cyan-500/50 transition duration-300">
               {selectedEquipment.imageUrl ? (
                 <img
                   src={selectedEquipment.imageUrl}
                   alt={selectedEquipment.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">

@@ -85,10 +85,13 @@ export const TroubleshootTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header and Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl glass-panel shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
         <div>
-          <div className="flex items-center space-x-2">
-            <Wrench className="w-5 h-5 text-cyan-400" />
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+              <Wrench className="w-4 h-4" />
+            </div>
             <h2 className="text-lg font-bold text-white">Interactive Diagnostic & Troubleshooting Engine</h2>
           </div>
           <p className="text-xs text-slate-400 mt-1">
@@ -104,7 +107,7 @@ export const TroubleshootTab: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search fault code (e.g. ERR-VIB) or symptom..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-cyan-500 focus:outline-none text-xs text-slate-200 placeholder:text-slate-500 transition"
+            className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-cyan-500 focus:outline-none text-xs text-slate-200 placeholder:text-slate-500 transition shadow-inner"
           />
         </div>
       </div>

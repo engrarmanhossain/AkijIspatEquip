@@ -82,9 +82,12 @@ export const AnalyticsTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Analytics Banner */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl">
-        <div className="flex items-center space-x-2">
-          <BarChart3 className="w-5 h-5 text-cyan-400" />
+      <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
+        <div className="flex items-center space-x-2.5">
+          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+            <BarChart3 className="w-5 h-5" />
+          </div>
           <h2 className="text-lg font-bold text-white">Reliability Engineering & Maintenance KPIs</h2>
         </div>
         <p className="text-xs text-slate-400 mt-1">
@@ -93,34 +96,34 @@ export const AnalyticsTab: React.FC = () => {
 
         {/* Top Metric Strip */}
         <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Fleet MTBF</span>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Fleet MTBF</span>
             <span className="text-2xl font-extrabold font-mono text-white mt-1 block">
               {stats.plantMTBF} hrs
             </span>
             <span className="text-[11px] text-emerald-400 flex items-center mt-0.5">
-              <TrendingUp className="w-3 h-3 mr-0.5" /> +4.2% vs last quarter
+              <TrendingUp className="w-3 h-3 mr-1" /> +4.2% vs last quarter
             </span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Fleet MTTR</span>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Fleet MTTR</span>
             <span className="text-2xl font-extrabold font-mono text-cyan-300 mt-1 block">
               {stats.plantMTTR} hrs
             </span>
             <span className="text-[11px] text-slate-400 mt-0.5">Mean Time To Repair</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Downtime Logged</span>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Downtime Logged</span>
             <span className="text-2xl font-extrabold font-mono text-amber-300 mt-1 block">
               {stats.totalDowntimeThisMonth} hrs
             </span>
             <span className="text-[11px] text-slate-400 mt-0.5">Month-to-Date total</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Maintenance Spend YTD</span>
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Maintenance Spend YTD</span>
             <span className="text-2xl font-extrabold font-mono text-emerald-400 mt-1 block">
               ${stats.totalMaintenanceCostYTD.toLocaleString()}
             </span>
@@ -132,7 +135,8 @@ export const AnalyticsTab: React.FC = () => {
       {/* Row 1: Availability Trend & MTBF/MTTR Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Availability 6-Month Trend */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+        <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-xl space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center space-x-2">
@@ -141,7 +145,7 @@ export const AnalyticsTab: React.FC = () => {
               </h3>
               <p className="text-xs text-slate-400">Monthly historical trend benchmarked against 95.0% target</p>
             </div>
-            <span className="px-2 py-0.5 rounded font-mono text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/40">
+            <span className="px-2.5 py-0.5 rounded-full font-mono text-xs font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 shadow-sm">
               Live: {stats.operationalAvailability}%
             </span>
           </div>
@@ -182,7 +186,8 @@ export const AnalyticsTab: React.FC = () => {
         </div>
 
         {/* MTBF per Machine Asset */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+        <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-xl space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent"></div>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center space-x-2">
@@ -220,7 +225,8 @@ export const AnalyticsTab: React.FC = () => {
       {/* Row 2: Downtime Hours Pareto & Cost Allocation */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Downtime Pareto */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+        <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-xl space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center space-x-2">
@@ -255,7 +261,8 @@ export const AnalyticsTab: React.FC = () => {
         </div>
 
         {/* Maintenance Cost & Spend Breakdown */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-5">
+        <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-xl space-y-5 relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
           <div>
             <h3 className="text-sm font-bold text-white flex items-center space-x-2">
               <DollarSign className="w-4 h-4 text-emerald-400" />

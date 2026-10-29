@@ -130,11 +130,14 @@ export const MaintenanceRegisterTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner & Control Bar */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+      <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-xl space-y-4 relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2">
-              <ClipboardList className="w-5 h-5 text-cyan-400" />
+            <div className="flex items-center space-x-2.5">
+              <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+                <ClipboardList className="w-4 h-4" />
+              </div>
               <h2 className="text-lg font-bold text-white">Digital Maintenance Register & Work Order Logbook</h2>
             </div>
             <p className="text-xs text-slate-400 mt-1">
@@ -143,13 +146,13 @@ export const MaintenanceRegisterTab: React.FC = () => {
           </div>
 
           {/* Quick Metrics & Actions */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {companySettings.googleSpreadsheetUrl && (
               <a
                 href={companySettings.googleSpreadsheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-600/50 text-xs font-semibold flex items-center transition shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-600/50 text-xs font-semibold flex items-center transition shadow-sm"
                 title="Open live Google Spreadsheet database"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
@@ -159,7 +162,7 @@ export const MaintenanceRegisterTab: React.FC = () => {
             )}
             <button
               onClick={exportRecordsToCSV}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium flex items-center transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 text-xs font-semibold flex items-center transition shadow-sm"
               title="Export maintenance register to Excel-compatible CSV"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
@@ -167,7 +170,7 @@ export const MaintenanceRegisterTab: React.FC = () => {
             </button>
             <button
               onClick={exportRecordsToJSON}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium flex items-center transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 text-xs font-semibold flex items-center transition shadow-sm"
               title="Export maintenance register as raw JSON"
             >
               <Download className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
@@ -175,14 +178,14 @@ export const MaintenanceRegisterTab: React.FC = () => {
             </button>
             <button
               onClick={handlePrint}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium flex items-center transition"
+              className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 text-xs font-semibold flex items-center transition shadow-sm"
             >
               <Printer className="w-3.5 h-3.5 mr-1.5 text-slate-300" />
               Print Log
             </button>
             <button
               onClick={() => openCreateWorkOrder()}
-              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold flex items-center transition shadow-lg shadow-cyan-600/20"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold flex items-center transition shadow-lg shadow-cyan-600/25 transform active:scale-95"
             >
               <PlusCircle className="w-4 h-4 mr-1.5" />
               + Create Work Order

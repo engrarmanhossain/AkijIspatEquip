@@ -98,11 +98,12 @@ export const EmployeesTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
+      <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-xl space-y-4 relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2.5">
-              <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]">
                 <Users className="w-5 h-5" />
               </div>
               <h2 className="text-lg font-bold text-white">Plant Staff Directory & Access Permissions</h2>
@@ -208,10 +209,10 @@ export const EmployeesTab: React.FC = () => {
           return (
             <div
               key={emp.id}
-              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 shadow-xl relative ${
+              className={`p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between space-y-4 shadow-xl relative overflow-hidden ${
                 isCurrentUser
-                  ? 'bg-slate-900/90 border-cyan-500/60 ring-1 ring-cyan-500/30'
-                  : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                  ? 'glass-panel border-cyan-500/60 ring-1 ring-cyan-500/40 shadow-cyan-500/10'
+                  : 'glass-panel glass-panel-hover'
               }`}
             >
               <div className="space-y-3">
