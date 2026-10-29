@@ -17,6 +17,9 @@ import { CompanySettingsModal } from './components/CompanySettingsModal';
 import { AddEquipmentModal } from './components/AddEquipmentModal';
 import { WorkUpdateModal } from './components/WorkUpdateModal';
 import { EquipmentRequestsModal } from './components/EquipmentRequestsModal';
+import { ManualParameterInputModal } from './components/ManualParameterInputModal';
+import { EditPhysicalStandardModal } from './components/EditPhysicalStandardModal';
+import { ParameterAuditModal } from './components/ParameterAuditModal';
 import { Shield, Activity } from 'lucide-react';
 
 const DashboardContent: React.FC = () => {
@@ -84,6 +87,9 @@ const DashboardContent: React.FC = () => {
       <AddEquipmentModal />
       <WorkUpdateModal />
       <EquipmentRequestsModal />
+      <ManualParameterInputModal />
+      <EditPhysicalStandardModal />
+      <ParameterAuditModal />
     </div>
   );
 };

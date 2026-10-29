@@ -31,6 +31,18 @@ import {
   Image as ImageIcon,
   FolderGit2,
   ExternalLink,
+  Lock,
+  Unlock,
+  Sliders,
+  History,
+  Info,
+  User,
+  Check,
+  AlertOctagon,
+  AlertTriangle,
+  Layers,
+  Cpu,
+  Shield,
 } from 'lucide-react';
 import type { SensorParameter } from '../types';
 
@@ -49,16 +61,35 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
     openAddEquipmentModal,
     openWorkUpdateModal,
     openEquipmentRequestModal,
+    openManualInputModal,
+    openEditPhysicalStandardModal,
+    openAuditModal,
+    parameterInputLogs,
   } = useDashboard();
 
-  const { currentUser, isManager, isLowerManagement, isAdmin, companySettings } = useAuth();
+  const { currentUser, isManager, isLowerManagement, isManagementEmployee, isAdmin, companySettings } = useAuth();
 
   const [activeSensorKey, setActiveSensorKey] = useState<'vibration' | 'temperature' | 'pressure' | 'motorLoad'>('vibration');
   const [filterCategory, setFilterCategory] = useState<string>('All');
+  const [paramPriorityFilter, setParamPriorityFilter] = useState<'All' | 'High Priority' | 'Less Priority'>('All');
 
   if (!selectedEquipment) return null;
 
-  const categories = ['All', 'Pump', 'CNC', 'Compressor', 'Motor', 'Conveyor', 'Hydraulic'];
+  const categories = [
+    'All',
+    'VFD',
+    'DC Drive',
+    'DC Motor',
+    'Induction Motor',
+    'Transformer',
+    'Mill Field Sensor',
+    'PLC & Automation',
+    'Pump',
+    'CNC',
+    'Compressor',
+    'Conveyor',
+    'Hydraulic',
+  ];
   const filteredEquipment = filterCategory === 'All' 
     ? equipmentList 
     : equipmentList.filter((e) => e.category === filterCategory);
@@ -368,6 +399,78 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
           </div>
         </div>
 
+        {/* Physical Specifications & Mill Application Details Panel */}
+        <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <Cpu className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                Physical Asset Data & Engineering Specifications
+              </span>
+            </div>
+
+            <button
+              onClick={() => openEditPhysicalStandardModal(selectedEquipment)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition ${
+                isManagementEmployee
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-sm'
+                  : 'bg-slate-800/80 text-slate-400 border border-slate-700'
+              }`}
+              title={
+                isManagementEmployee
+                  ? 'Edit Equipment Physical Data & Standard Benchmarks'
+                  : 'Management Authorization Required: Physical data & standard benchmarks locked'
+              }
+            >
+              {isManagementEmployee ? (
+                <>
+                  <Unlock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Edit Physical & Standard Data</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Physical & Standard Data Locked 🔒 (Management Only)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {selectedEquipment.physicalData?.applicationArea && (
+            <div className="text-xs text-slate-300 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 leading-relaxed">
+              <strong className="text-amber-400">Application Area & Process Duty: </strong>
+              {selectedEquipment.physicalData.applicationArea}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            {selectedEquipment.physicalData?.voltageRating && (
+              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                <span className="text-[10px] uppercase text-slate-400 block">Voltage Rating</span>
+                <span className="font-mono text-slate-200 font-semibold">{selectedEquipment.physicalData.voltageRating}</span>
+              </div>
+            )}
+            {selectedEquipment.physicalData?.powerRating && (
+              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                <span className="text-[10px] uppercase text-slate-400 block">Power Rating</span>
+                <span className="font-mono text-slate-200 font-semibold">{selectedEquipment.physicalData.powerRating}</span>
+              </div>
+            )}
+            {selectedEquipment.physicalData?.coolingType && (
+              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                <span className="text-[10px] uppercase text-slate-400 block">Cooling System</span>
+                <span className="text-slate-200 font-semibold">{selectedEquipment.physicalData.coolingType}</span>
+              </div>
+            )}
+            {selectedEquipment.physicalData?.enclosureClass && (
+              <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800/80">
+                <span className="text-[10px] uppercase text-slate-400 block">Enclosure Protection</span>
+                <span className="font-mono text-slate-200 font-semibold">{selectedEquipment.physicalData.enclosureClass}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Subsystem Health Matrix */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
@@ -435,6 +538,26 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Manual Parameter Input CTA (All Employees) */}
+            <button
+              onClick={() => openManualInputModal(selectedEquipment)}
+              className="px-3 py-1.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-700/60 text-cyan-300 text-xs font-bold flex items-center transition shadow-sm"
+              title="Manual Input for all parameters (Available to all staff)"
+            >
+              <PlusCircle className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
+              <span>+ Record Parameter (All Staff)</span>
+            </button>
+
+            {/* Audit Trail CTA */}
+            <button
+              onClick={() => openAuditModal(selectedEquipment.id)}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center transition"
+              title="See who input parameter data"
+            >
+              <History className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
+              <span>Audit Log: Who Input Data</span>
+            </button>
+
             {/* Log Work Update CTA */}
             <button
               onClick={() => openWorkUpdateModal(selectedEquipment)}
@@ -876,6 +999,285 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
             </ResponsiveContainer>
           </div>
         )}
+      </div>
+
+      {/* Comprehensive Equipment Health Parameter Breakdown & Shift Register */}
+      <div className="p-5 sm:p-6 rounded-2xl glass-panel shadow-2xl space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+          <div>
+            <div className="flex items-center space-x-2.5">
+              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                <Sliders className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                  <span>Equipment Health Parameters & Shift Register</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/60">
+                    {selectedEquipment.tag}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  High & Less Priority condition breakdown, standard benchmark targets, and verifiable operator entry audit logs.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Manual Parameter Input Button (ALL EMPLOYEES) */}
+            <button
+              onClick={() => openManualInputModal(selectedEquipment)}
+              className="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center space-x-1.5 transition shadow-lg shadow-cyan-600/20"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Manual Parameter Input (All Staff)</span>
+            </button>
+
+            {/* Edit Physical & Standard Data Button (MANAGEMENT ONLY) */}
+            <button
+              onClick={() => openEditPhysicalStandardModal(selectedEquipment)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition ${
+                isManagementEmployee
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-400 border border-slate-700'
+              }`}
+              title={
+                isManagementEmployee
+                  ? 'Edit Equipment Physical Data & Standard Benchmarks'
+                  : 'Management Authorization Required: Physical data & standard benchmarks locked'
+              }
+            >
+              {isManagementEmployee ? (
+                <>
+                  <Unlock className="w-4 h-4 text-slate-950" />
+                  <span>Edit Physical & Standard Data</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 text-rose-400" />
+                  <span>Edit Data 🔒 (Management Only)</span>
+                </>
+              )}
+            </button>
+
+            {/* Audit Trail Button */}
+            <button
+              onClick={() => openAuditModal(selectedEquipment.id)}
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center space-x-1.5 transition shadow-sm"
+              title="See who input parameter data"
+            >
+              <History className="w-4 h-4 text-cyan-400" />
+              <span>Audit Trail: Who Input Data</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Priority Filter Tabs & Policy Notice */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setParamPriorityFilter('All')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                paramPriorityFilter === 'All'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              All Parameters ({(selectedEquipment.parameters || []).length})
+            </button>
+            <button
+              onClick={() => setParamPriorityFilter('High Priority')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+                paramPriorityFilter === 'High Priority'
+                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>
+                High Priority (Shift/Daily){' '}
+                (
+                {
+                  (selectedEquipment.parameters || []).filter(
+                    (p) => p.priority === 'High Priority'
+                  ).length
+                }
+                )
+              </span>
+            </button>
+            <button
+              onClick={() => setParamPriorityFilter('Less Priority')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+                paramPriorityFilter === 'Less Priority'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>
+                Less Priority (Monthly/PM){' '}
+                (
+                {
+                  (selectedEquipment.parameters || []).filter(
+                    (p) => p.priority === 'Less Priority'
+                  ).length
+                }
+                )
+              </span>
+            </button>
+          </div>
+
+          <div className="text-xs text-slate-400 flex items-center space-x-2">
+            {isManagementEmployee ? (
+              <span className="inline-flex items-center text-emerald-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Management Calibration & Auditor Privileges Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center text-slate-400">
+                <Lock className="w-3.5 h-3.5 mr-1 text-slate-400" /> Standard Benchmarks Locked (Management Only)
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Parameter List Cards */}
+        <div className="space-y-3">
+          {(!selectedEquipment.parameters || selectedEquipment.parameters.length === 0) ? (
+            <div className="p-8 text-center text-slate-400 text-xs bg-slate-950/60 rounded-xl border border-slate-800">
+              <Sliders className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+              <span>No health parameters defined for this asset yet. Management can calibrate parameters using "Edit Physical & Standard Data".</span>
+            </div>
+          ) : (
+            (selectedEquipment.parameters || [])
+              .filter((p) => paramPriorityFilter === 'All' || p.priority === paramPriorityFilter)
+              .map((param) => (
+                <div
+                  key={param.id}
+                  className="p-4 rounded-xl bg-slate-950 border border-slate-800/90 flex flex-col xl:flex-row xl:items-center justify-between gap-4 transition hover:border-slate-700"
+                >
+                  {/* Left Column: Priority Badge, Parameter Name, Benchmark & Measured Value */}
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${
+                          param.priority === 'High Priority'
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                        }`}
+                      >
+                        {param.priority}
+                      </span>
+                      <span className="font-bold text-sm text-white">{param.name}</span>
+                      {param.unit && (
+                        <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/40">
+                          {param.unit}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Target / Benchmark (Standard Data) */}
+                    <div className="flex items-start space-x-2 text-xs bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                      <span className="font-bold text-amber-400 shrink-0 flex items-center gap-1">
+                        <Info className="w-3.5 h-3.5 text-amber-400" />
+                        Target / Benchmark (Standard Data):
+                      </span>
+                      <span className="text-slate-200 font-mono text-xs">{param.benchmark}</span>
+                    </div>
+
+                    {/* Current Measured Value */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+                      <span className="text-slate-400">Current Field Reading:</span>
+                      <span className="font-mono font-bold text-white text-xs bg-slate-900 px-2.5 py-1 rounded border border-slate-800">
+                        {param.currentValue}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          param.status === 'healthy'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : param.status === 'warning'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse'
+                        }`}
+                      >
+                        {param.status}
+                      </span>
+                    </div>
+
+                    {param.notes && (
+                      <p className="text-xs text-slate-300 italic pt-1">
+                        Observation: "{param.notes}"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Middle Column: Who Inputted This Data (Management Auditor Chip) */}
+                  <div className="xl:w-80 shrink-0 p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-md">
+                      {param.lastUpdatedBy?.name ? param.lastUpdatedBy.name.charAt(0) : 'U'}
+                    </div>
+
+                    <div className="flex-1 min-w-0 text-xs">
+                      <div className="text-[10px] uppercase font-semibold text-slate-400 flex items-center justify-between">
+                        <span>Inputted By:</span>
+                        <span className="font-mono text-cyan-400">{param.lastUpdatedBy?.employeeId || 'ID: —'}</span>
+                      </div>
+                      <div className="font-bold text-white truncate text-xs">
+                        {param.lastUpdatedBy?.name || 'Shift Operator'}
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate">
+                        {param.lastUpdatedBy?.designation || 'Field Staff'}
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 mt-1 border-t border-slate-800/80">
+                        <span
+                          className={`px-1.5 py-0.2 rounded font-semibold ${
+                            param.lastUpdatedBy?.role === 'non_management'
+                              ? 'bg-blue-950 text-blue-300'
+                              : 'bg-amber-950 text-amber-300'
+                          }`}
+                        >
+                          {param.lastUpdatedBy?.role === 'non_management' ? 'Non-Management Tech' : 'Management'}
+                        </span>
+                        <span className="font-mono text-slate-400">{param.lastUpdated}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Actions */}
+                  <div className="flex xl:flex-col items-center justify-end gap-2 shrink-0">
+                    {/* Manual Input CTA for this parameter (available to all) */}
+                    <button
+                      onClick={() => openManualInputModal(selectedEquipment, param)}
+                      className="w-full px-3 py-1.5 rounded-lg bg-cyan-600/90 hover:bg-cyan-500 text-white text-xs font-bold transition flex items-center justify-center space-x-1 shadow-sm"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Record Reading</span>
+                    </button>
+
+                    {/* Audit History CTA */}
+                    <button
+                      onClick={() => openAuditModal(selectedEquipment.id, param.id)}
+                      className="w-full px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition flex items-center justify-center space-x-1"
+                      title="View full audit log history of who inputted readings for this parameter"
+                    >
+                      <History className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Audit Trail</span>
+                    </button>
+
+                    {/* Management edit standard shortcut */}
+                    {isManagementEmployee && (
+                      <button
+                        onClick={() => openEditPhysicalStandardModal(selectedEquipment)}
+                        className="w-full px-3 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30 transition flex items-center justify-center space-x-1"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>Edit Standard</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+          )}
+        </div>
       </div>
 
       {/* Work Updates & Repair Progress Timeline */}

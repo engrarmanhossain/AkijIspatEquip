@@ -243,6 +243,13 @@ export const AddEquipmentModal: React.FC = () => {
                 onChange={(e) => setCategory(e.target.value as EquipmentCategory)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 focus:border-cyan-500 focus:outline-none font-semibold text-cyan-400"
               >
+                <option value="VFD">Variable Frequency Drive (VFD)</option>
+                <option value="DC Drive">DC Drive (Thyristor / SCR Converter)</option>
+                <option value="DC Motor">DC Motor (Main Mill Stands)</option>
+                <option value="Induction Motor">Induction Motor (AC Motor)</option>
+                <option value="Transformer">Power & Converter Transformer</option>
+                <option value="Mill Field Sensor">Mill Field Sensor (HMD / Loop Scanner)</option>
+                <option value="PLC & Automation">PLC & Automation System</option>
                 <option value="Pump">Centrifugal / Slurry Pump</option>
                 <option value="CNC">CNC Machining Center</option>
                 <option value="Compressor">Rotary Screw Compressor</option>

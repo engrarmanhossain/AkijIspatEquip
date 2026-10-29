@@ -23,6 +23,7 @@ import {
   FolderGit2,
   FileSpreadsheet,
   ExternalLink,
+  History,
 } from 'lucide-react';
 
 export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFaultModal }) => {
@@ -35,6 +36,7 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
     equipmentRequests,
     openCreateWorkOrder,
     openEquipmentRequestModal,
+    openAuditModal,
     resetAllDataToDefaults,
   } = useDashboard();
 
@@ -299,6 +301,17 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                     >
                       <User className="w-4 h-4 text-cyan-400" />
                       <span>My Profile & Photo</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        openAuditModal();
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full p-2 rounded-xl text-left hover:bg-slate-800 text-slate-200 flex items-center space-x-2 transition"
+                    >
+                      <History className="w-4 h-4 text-cyan-400" />
+                      <span>Parameter Input Audit Log</span>
                     </button>
 
                     {isAdmin && (

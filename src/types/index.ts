@@ -1,4 +1,11 @@
 export type EquipmentCategory = 
+  | 'VFD'
+  | 'DC Drive'
+  | 'DC Motor'
+  | 'Induction Motor'
+  | 'Transformer'
+  | 'Mill Field Sensor'
+  | 'PLC & Automation'
   | 'Pump' 
   | 'CNC' 
   | 'Compressor' 
@@ -126,6 +133,65 @@ export interface AlertItem {
   acknowledged: boolean;
 }
 
+export type ParameterPriority = 'High Priority' | 'Less Priority';
+
+export interface ParameterInputLog {
+  id: string;
+  parameterId: string;
+  parameterName: string;
+  equipmentId: string;
+  equipmentName: string;
+  timestamp: string;
+  value: string;
+  status: 'healthy' | 'warning' | 'critical';
+  notes?: string;
+  shift?: 'Shift A (Morning)' | 'Shift B (Evening)' | 'Shift C (Night)' | 'General Shift';
+  inputBy: {
+    id: string;
+    employeeId: string;
+    name: string;
+    role: UserRole;
+    designation: string;
+    avatarUrl?: string;
+  };
+}
+
+export interface HealthParameterItem {
+  id: string;
+  name: string;
+  priority: ParameterPriority;
+  benchmark: string; // Target / Benchmark standard specification (Standard Data - Editable only by Management)
+  currentValue: string; // Current measured or observed value (Manual input by ALL employees)
+  unit?: string;
+  status: 'healthy' | 'warning' | 'critical';
+  notes?: string;
+  lastUpdated: string;
+  lastUpdatedBy?: {
+    id: string;
+    employeeId: string;
+    name: string;
+    role: UserRole;
+    designation: string;
+    avatarUrl?: string;
+  };
+  inputLogs?: ParameterInputLog[];
+}
+
+export interface EquipmentPhysicalData {
+  voltageRating?: string;
+  powerRating?: string;
+  ratedSpeed?: string;
+  coolingType?: string;
+  enclosureClass?: string;
+  applicationArea?: string; // e.g. "Pinch Rolls, Flying Shears, Finishing Block"
+  primaryDuty?: string;
+  weightKg?: number;
+  dimensions?: string;
+  installationBay?: string;
+  ratedCurrent?: string;
+  controlProtocol?: string;
+}
+
 export interface Equipment {
   id: string;
   name: string;
@@ -147,6 +213,8 @@ export interface Equipment {
   mttrHours: number;
   imageUrl?: string;
   workUpdates?: WorkProgressUpdate[];
+  parameters?: HealthParameterItem[]; // Health parameter breakdown (High Priority & Less Priority)
+  physicalData?: EquipmentPhysicalData; // Equipment physical specifications
 }
 
 export interface SparePart {

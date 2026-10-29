@@ -12,9 +12,115 @@ Compliant with standard **ISO 55000 Asset Management** workflows and modern indu
 
 | Role | Name | Email | Password | Permissions & Capabilities |
 | :--- | :--- | :--- | :--- | :--- |
-| **System Administrator** | **Arman Hossain** | `armanhossain.eee.info@gmail.com` | `arman2026**` | **Full Authority**: Add, edit, and delete Management & Non-Management employee profiles; edit employee emails, passwords, and designations; set granular permissions; full CMMS maintenance control. |
-| **Management Employee** | **Marcus Vance** | `marcus.vance@plant04.com` | `mfg2026` | **Supervisor Authority**: Approve work orders, calibrate telemetry baselines, sign-off maintenance. Can edit own personal profile (phone, department, emergency contact, bio) with **Email, Password, and Designation locked**. |
-| **Non-Management Employee** | **Tariq Al-Mansoor** | `tariq.mansoor@plant04.com` | `tech2026` | **Field Technician**: Create work orders, log repair actions and spare parts. Can edit own personal profile (phone, department, emergency contact, bio) with **Email, Password, and Designation locked**. |
+| **System Administrator** | **Arman Hossain** | `armanhossain.eee.info@gmail.com` | `arman2026**` | **Full Authority**: Add, edit, and delete Management & Non-Management employee profiles; edit employee emails, passwords, and designations; set granular permissions; full CMMS maintenance control; edit physical & standard equipment data; full parameter audit trail view. |
+| **Management Employee (Manager)** | **Marcus Vance** | `marcus.vance@plant04.com` | `mfg2026` | **Executive Supervisor**: Approve work orders, edit physical equipment data & standard benchmarks, decommission machinery, sign-off maintenance, view parameter audit trail of who input measurements. |
+| **Management Employee (Asst. Manager)** | **Elena Rostova** | `elena.rostova@plant04.com` | `auto2026` | **Operations & Automation Supervisor**: Edit physical data & standard benchmarks, approve work orders, view parameter input logs & author attributions. |
+| **Management Employee (Jr. Supervisor)** | **Tariq Al-Mansoor** | `tariq.mansoor@plant04.com` | `tech2026` | **Shift Maintenance Supervisor**: Lower-level management. Can edit physical & standard benchmark data, submit machinery requests, perform manual parameter input, and view who input parameter readings. |
+| **Non-Management Employee (Vibration Analyst)** | **David Chen** | `david.chen@plant04.com` | `vib2026` | **Field Specialist**: Has manual parameter measurement input across all equipment parameters. Can create work orders and log repair progress. **Physical asset data and standard benchmarks are strictly locked 🔒**. |
+| **Non-Management Employee (Lubrication Tech)** | **Sarah Jenkins** | `sarah.jenkins@plant04.com` | `pdm2026` | **Field Specialist**: Has manual parameter measurement input across all equipment parameters. Can create work orders and log repair progress. **Physical asset data and standard benchmarks are strictly locked 🔒**. |
+
+---
+
+## 🛡️ Role-Based Data Calibration & Audit Governance
+
+1. **Manual Parameter Input (Open to ALL Employees)**:
+   - Any authenticated employee (Non-Management Field Specialists, Supervisors, Managers, and Admins) can log manual parameter readings.
+   - Accessible via **"+ Manual Parameter Input"** on any parameter card or via the **"Full Shift Checklist"** batch tool.
+   - Records the measured/observed value, status condition (Normal/Healthy, Warning, Critical), shift, and sensory inspection notes.
+   - Automatically attributes the entry to the currently logged-in user with timestamp and employee ID.
+
+2. **Physical Data & Standard Benchmark Editing (Management Only)**:
+   - **Data Physical**: Equipment Name, Tag, Location, Manufacturer, Model, Serial Number, Installation Date, Operating Runtime Hours, Criticality, and Engineering Specifications (Voltage, Power, Speed, Cooling Type, Application Area).
+   - **Data Standard**: Parameter Target / Benchmark standard specification rules, Priority classification (High Priority vs. Less Priority), and threshold limits.
+   - **Restriction**: When Non-Management employees view the system, the *"Edit Physical & Standard Data"* button is locked 🔒. Attempting to calibrate triggers a security block stating that only Management Employees (Directors, Managers, and Junior Supervisors) are authorized.
+
+3. **Verifiable Audit Trail (Management Visibility)**:
+   - Management employees can inspect **WHO input every single parameter measurement**:
+     - Parameter Cards feature an **"Inputted By"** badge displaying the operator's Name, Profile Avatar, Employee ID, Role tag (Non-Management Tech vs. Management), Timestamp, and remarks.
+     - Dedicated **"Parameter Input Audit Trail & Operator Register"** modal with searchable filters by employee, equipment, status, and shift, plus single-click CSV export for ISO 55001 compliance.
+
+---
+
+## ⚙️ Monitored Machinery Fleet & Health Parameter Breakdown
+
+The dashboard monitors heavy-duty continuous mill equipment, divided into **High Priority** (shift/daily/weekly checks that prevent immediate cobbles, catastrophic flashovers, or unplanned shutdowns) and **Less Priority** (monthly/shutdown preventive maintenance for long-term reliability):
+
+### 1. Variable Frequency Drives (VFDs) — `EQ-VFD-01`
+- **Application**: Used in Pinch Rolls, Flying Shears, Finishing Block, Cooling Bed Roller Tables, and Water Quenching Pumps.
+- **High Priority Parameters**:
+  - `DC Bus Voltage & Ripple`: Stable ~540–680V DC (for 400–480V AC); Ripple less than 5V
+  - `IGBT Heatsink Temp`: Less than 65°C (Alarm at 75°C)
+  - `Output Current Balance`: Phase imbalance less than 2%
+  - `Braking Chopper & Resistor Temp`: Zero nuisance trips during regenerative deceleration
+- **Less Priority Parameters**:
+  - `Cooling Fan Current / RPM`: Smooth operation, zero bearing noise
+  - `Control Card Dust & Corrosion`: Zero carbon/iron dust on PCBs
+  - `Harmonic Filter Reactor Temp`: Less than 90°C (Class F/H)
+
+### 2. DC Drives (Thyristor / SCR Converters) — `EQ-DCDRV-02`
+- **Application**: Used in Roughing, Intermediate, and Continuous Mill Main Stands (Siemens Simoreg, ABB DCS800).
+- **High Priority Parameters**:
+  - `Armature & Field Current Stability`: Matches torque demand without hunting
+  - `SCR Firing Angle (α) Symmetry`: Balanced across all 6/12 pulses
+  - `Supply Sync & Phase Loss Detection`: Clean zero-crossing synchronization
+  - `Tachogenerator / Encoder Feedback`: Ripple-free feedback voltage/pulses
+- **Less Priority Parameters**:
+  - `Snubber Circuit RC Health`: No swelling or burn marks on resistors/caps
+  - `Busbar Joint Torque & Temp`: Thermography delta-T less than 10°C above ambient
+
+### 3. DC Motors (Main Mill Stands) — `EQ-DCMTR-03`
+- **Application**: Heavy-duty mill motors (400 kW to 2500+ kW) handling high impact torque as the billet enters the rolls.
+- **High Priority Parameters**:
+  - `Commutator Film & Brush Sparking`: Chocolate-brown patina; sparking class 1 or 1¼
+  - `Carbon Brush Length & Spring Tension`: Greater than 40% original length; uniform pressure (180–220 g/cm²)
+  - `Forced Cooling Blower Air Pressure`: Differential pressure switch healthy; clean filters
+  - `Armature & Field Insulation Resistance (IR)`: Greater than 5 MΩ (at 500V/1000V DC)
+- **Less Priority Parameters**:
+  - `Polarization Index (PI)`: Greater than 2.0
+  - `Commutator Runout (Concentricity)`: Less than 0.03 mm tir
+
+### 4. Induction Motors (AC Motors) — `EQ-ACMTR-04`
+- **Application**: Used in Descalers, Roller Tables, Shear Drives, Hydraulic Power Packs (HPU), Blowers, and TMT Water Pumps.
+- **High Priority Parameters**:
+  - `DE / NDE Bearing Temp & Vibration`: Temp less than 80°C; Vibration less than 4.5 mm/s RMS
+  - `Winding Insulation Resistance (IR)`: Greater than 10 MΩ (LV), greater than 100 MΩ (MV)
+  - `Phase Current & Voltage Unbalance`: Current unbalance less than 5%; Voltage unbalance less than 2%
+- **Less Priority Parameters**:
+  - `Shaft Grounding / Bearing Fluting (VFD Duty)`: Intact insulated NDE bearing or grounding brush
+  - `Cooling Cowl & Fin Cleanliness`: Unobstructed airflow over TEFC fins
+  - `Space Heater Current`: Functional when motor is stopped
+
+### 5. Power & Converter Transformers — `EQ-XFR-05`
+- **Application**: Substation Step-Down Transformers (33/11kV) and Multi-Winding Converter Duty Transformers (11kV/0.69kV).
+- **High Priority Parameters**:
+  - `Oil Temperature (OTI) & Winding Temp (WTI)`: OTI less than 75°C; WTI less than 85°C
+  - `Buchholz Relay & PRV Status`: Zero gas accumulation; no oil leakage
+  - `Silica Gel Breather Color`: Deep Blue (or Orange for non-toxic)
+  - `Oil Dielectric Breakdown Voltage (BDV)`: Greater than 50 kV (new/filtered), min 30–40 kV in service
+- **Less Priority Parameters**:
+  - `Dissolved Gas Analysis (DGA)`: Low H2, CH4, C2H2 (Acetylene must be 0 ppm)
+  - `OLTC / OCTC Contact & Earth Resistance`: Earth pit resistance less than 1 Ω; neutral earthing intact
+
+### 6. Mill Field Sensors — `EQ-SNS-06`
+- **Application**: Hot Metal Detectors (HMDs), Loop Scanners, Dual-Wavelength Pyrometers, Incremental Encoders, and Proximity Switches.
+- **High Priority Parameters**:
+  - `Optical Lens Cleanliness & Air Purge`: 100% clear optics; clean, dry compressed air at 1.5–2 bar
+  - `Water Cooling Jacket Flow (HMD/Loop)`: Continuous flow; outlet temp less than 40°C
+  - `Encoder Coupling & Shield Earthing`: Zero mechanical play; shield grounded at cabinet end only
+- **Less Priority Parameters**:
+  - `Sensor Alignment & Viewing Angle`: Centered on pass-line / roller table
+  - `Heat-Resistant Cabling & Conduit Integrity`: Intact silicone/teflon jacket and flexible metallic conduit
+
+### 7. PLCs & Automation Systems — `EQ-PLC-07`
+- **Application**: Main Mill PLC, High-Speed Counter (HSC) Modules, Remote I/O Drops (Profibus/Profinet), and SCADA/HMI.
+- **High Priority Parameters**:
+  - `CPU Scan Time & Diagnostic Buffer`: Scan time less than 5–10 ms (for fast shear/loop logic); 0 I/O faults
+  - `Fieldbus Signal Quality (Profibus/Profinet)`: Zero packet retries; intact bus termination resistors (ON at ends)
+  - `24V DC Control Power Supply & UPS Health`: 24.0V–24.5V DC; ripple less than 100 mV; UPS battery greater than 30 min autonomy
+- **Less Priority Parameters**:
+  - `Instrument Earth vs. Power Earth Isolation`: Less than 1 Ω resistance; zero ground loop current on shields
+  - `PLC Battery & Program/Parameter Backup`: Battery voltage healthy; up-to-date backup stored offline
+  - `Panel AC / Peltier Cooler Performance`: Internal panel temp less than 30°C; positive air pressure
 
 ---
 

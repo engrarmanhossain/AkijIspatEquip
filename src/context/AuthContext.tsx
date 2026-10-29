@@ -10,6 +10,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isManager: boolean; // Manager / Assistant Manager (can add/delete equipment directly)
   isLowerManagement: boolean; // Lower level management (needs manager approval)
+  isManagementEmployee: boolean; // Management employee (admin, manager, management) - can edit physical and standard data
   isNonManagement: boolean;
   myProfileModalOpen: boolean;
   editEmployeeModalOpen: boolean;
@@ -316,6 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin: currentUser?.role === 'admin',
         isManager: currentUser?.role === 'manager' || currentUser?.role === 'admin',
         isLowerManagement: currentUser?.role === 'management',
+        isManagementEmployee: currentUser?.role === 'admin' || currentUser?.role === 'manager' || currentUser?.role === 'management',
         isNonManagement: currentUser?.role === 'non_management',
         myProfileModalOpen,
         editEmployeeModalOpen,

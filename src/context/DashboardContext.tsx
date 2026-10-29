@@ -11,6 +11,9 @@ import type {
   EquipmentTelemetry,
   EquipmentRequest,
   WorkProgressUpdate,
+  HealthParameterItem,
+  ParameterInputLog,
+  EquipmentPhysicalData,
 } from '../types';
 import {
   INITIAL_EQUIPMENT,
@@ -18,7 +21,9 @@ import {
   INITIAL_MAINTENANCE_RECORDS,
   INITIAL_TROUBLESHOOTING_GUIDES,
   INITIAL_EQUIPMENT_REQUESTS,
+  INITIAL_PARAMETER_INPUT_LOGS,
 } from '../data/mockData';
+import { useAuth } from './AuthContext';
 
 interface DashboardContextType {
   equipmentList: Equipment[];
@@ -72,27 +77,84 @@ interface DashboardContextType {
   openEquipmentRequestModal: () => void;
   closeEquipmentRequestModal: () => void;
 
+  // Parameter Manual Input & Management Data Editing
+  parameterInputLogs: ParameterInputLog[];
+  manualInputModalOpen: boolean;
+  targetParamForInput: { equipment: Equipment; parameter?: HealthParameterItem } | null;
+  openManualInputModal: (equipment: Equipment, parameter?: HealthParameterItem) => void;
+  closeManualInputModal: () => void;
+  recordParameterValue: (params: {
+    equipmentId: string;
+    parameterId: string;
+    value: string;
+    status: 'healthy' | 'warning' | 'critical';
+    notes?: string;
+    shift?: 'Shift A (Morning)' | 'Shift B (Evening)' | 'Shift C (Night)' | 'General Shift';
+  }) => { success: boolean; error?: string };
+  batchRecordParameters: (
+    equipmentId: string,
+    updates: {
+      parameterId: string;
+      value: string;
+      status: 'healthy' | 'warning' | 'critical';
+      notes?: string;
+    }[],
+    shift?: 'Shift A (Morning)' | 'Shift B (Evening)' | 'Shift C (Night)' | 'General Shift'
+  ) => { success: boolean; error?: string };
+  editPhysicalStandardModalOpen: boolean;
+  targetEquipmentForPhysicalEdit: Equipment | null;
+  openEditPhysicalStandardModal: (equipment: Equipment) => void;
+  closeEditPhysicalStandardModal: () => void;
+  updatePhysicalAndStandardData: (
+    equipmentId: string,
+    physicalUpdates: Partial<Equipment>,
+    parameterUpdates?: HealthParameterItem[]
+  ) => { success: boolean; error?: string };
+  auditModalOpen: boolean;
+  auditEquipmentId: string | null;
+  auditParameterId: string | null;
+  openAuditModal: (equipmentId?: string, parameterId?: string) => void;
+  closeAuditModal: () => void;
+
   resetAllDataToDefaults: () => void;
   exportRecordsToCSV: () => void;
   exportRecordsToJSON: () => void;
 }
 
 const STORAGE_KEYS = {
-  EQUIPMENT: 'equipguard_equipment_v2',
-  EQUIPMENT_REQUESTS: 'equipguard_equipment_requests_v2',
-  RECORDS: 'equipguard_records_v2',
-  ALERTS: 'equipguard_alerts_v2',
+  EQUIPMENT: 'equipguard_equipment_v3',
+  EQUIPMENT_REQUESTS: 'equipguard_equipment_requests_v3',
+  RECORDS: 'equipguard_records_v3',
+  ALERTS: 'equipguard_alerts_v3',
+  PARAM_LOGS: 'equipguard_param_logs_v3',
 };
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
 export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser, isManagementEmployee } = useAuth();
+
   const [equipmentList, setEquipmentList] = useState<Equipment[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.EQUIPMENT);
-      return saved ? JSON.parse(saved) : INITIAL_EQUIPMENT;
+      if (saved) {
+        const parsed: Equipment[] = JSON.parse(saved);
+        const existingIds = new Set(parsed.map((e) => e.id));
+        const missing = INITIAL_EQUIPMENT.filter((e) => !existingIds.has(e.id));
+        return [...parsed, ...missing];
+      }
+      return INITIAL_EQUIPMENT;
     } catch {
       return INITIAL_EQUIPMENT;
+    }
+  });
+
+  const [parameterInputLogs, setParameterInputLogs] = useState<ParameterInputLog[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.PARAM_LOGS);
+      return saved ? JSON.parse(saved) : INITIAL_PARAMETER_INPUT_LOGS;
+    } catch {
+      return INITIAL_PARAMETER_INPUT_LOGS;
     }
   });
 
@@ -138,6 +200,15 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [equipmentForWorkUpdate, setEquipmentForWorkUpdate] = useState<Equipment | null>(null);
   const [equipmentRequestModalOpen, setEquipmentRequestModalOpen] = useState<boolean>(false);
 
+  // Parameter & Audit Modals
+  const [manualInputModalOpen, setManualInputModalOpen] = useState<boolean>(false);
+  const [targetParamForInput, setTargetParamForInput] = useState<{ equipment: Equipment; parameter?: HealthParameterItem } | null>(null);
+  const [editPhysicalStandardModalOpen, setEditPhysicalStandardModalOpen] = useState<boolean>(false);
+  const [targetEquipmentForPhysicalEdit, setTargetEquipmentForPhysicalEdit] = useState<Equipment | null>(null);
+  const [auditModalOpen, setAuditModalOpen] = useState<boolean>(false);
+  const [auditEquipmentId, setAuditEquipmentId] = useState<string | null>(null);
+  const [auditParameterId, setAuditParameterId] = useState<string | null>(null);
+
   // Sync to LocalStorage
   useEffect(() => {
     try {
@@ -146,6 +217,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.warn('LocalStorage save failed', e);
     }
   }, [equipmentList]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.PARAM_LOGS, JSON.stringify(parameterInputLogs));
+    } catch (e) {
+      console.warn('LocalStorage save failed', e);
+    }
+  }, [parameterInputLogs]);
 
   useEffect(() => {
     try {
@@ -678,15 +757,255 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const openEquipmentRequestModal = () => setEquipmentRequestModalOpen(true);
   const closeEquipmentRequestModal = () => setEquipmentRequestModalOpen(false);
 
+  // Parameter Manual Input & Audit Modals
+  const openManualInputModal = (equipment: Equipment, parameter?: HealthParameterItem) => {
+    setTargetParamForInput({ equipment, parameter });
+    setManualInputModalOpen(true);
+  };
+  const closeManualInputModal = () => {
+    setTargetParamForInput(null);
+    setManualInputModalOpen(false);
+  };
+
+  const openEditPhysicalStandardModal = (equipment: Equipment) => {
+    setTargetEquipmentForPhysicalEdit(equipment);
+    setEditPhysicalStandardModalOpen(true);
+  };
+  const closeEditPhysicalStandardModal = () => {
+    setTargetEquipmentForPhysicalEdit(null);
+    setEditPhysicalStandardModalOpen(false);
+  };
+
+  const openAuditModal = (equipmentId?: string, parameterId?: string) => {
+    setAuditEquipmentId(equipmentId || null);
+    setAuditParameterId(parameterId || null);
+    setAuditModalOpen(true);
+  };
+  const closeAuditModal = () => {
+    setAuditEquipmentId(null);
+    setAuditParameterId(null);
+    setAuditModalOpen(false);
+  };
+
+  // Record Manual Parameter Value (Available to ALL employees!)
+  const recordParameterValue = (params: {
+    equipmentId: string;
+    parameterId: string;
+    value: string;
+    status: 'healthy' | 'warning' | 'critical';
+    notes?: string;
+    shift?: 'Shift A (Morning)' | 'Shift B (Evening)' | 'Shift C (Night)' | 'General Shift';
+  }): { success: boolean; error?: string } => {
+    const targetEq = equipmentList.find((e) => e.id === params.equipmentId);
+    if (!targetEq) return { success: false, error: 'Equipment not found.' };
+
+    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const employeeInfo = currentUser
+      ? {
+          id: currentUser.id,
+          employeeId: currentUser.employeeId,
+          name: currentUser.name,
+          role: currentUser.role,
+          designation: currentUser.designation,
+          avatarUrl: currentUser.avatarUrl,
+        }
+      : {
+          id: 'EMP-GEN',
+          employeeId: 'GEN-001',
+          name: 'Shift Technician',
+          role: 'non_management' as const,
+          designation: 'Field Inspection Technician',
+        };
+
+    const paramObj = targetEq.parameters?.find((p) => p.id === params.parameterId);
+    const paramName = paramObj?.name || 'Health Parameter';
+
+    const newLog: ParameterInputLog = {
+      id: `LOG-${Date.now().toString().slice(-6)}`,
+      parameterId: params.parameterId,
+      parameterName: paramName,
+      equipmentId: targetEq.id,
+      equipmentName: targetEq.name,
+      timestamp: nowStr,
+      value: params.value,
+      status: params.status,
+      notes: params.notes,
+      shift: params.shift || 'General Shift',
+      inputBy: employeeInfo,
+    };
+
+    setParameterInputLogs((prev) => [newLog, ...prev]);
+
+    setEquipmentList((prev) =>
+      prev.map((eq) => {
+        if (eq.id !== params.equipmentId) return eq;
+        const currentParams = eq.parameters || [];
+        const updatedParams = currentParams.map((p) => {
+          if (p.id !== params.parameterId) return p;
+          return {
+            ...p,
+            currentValue: params.value,
+            status: params.status,
+            notes: params.notes,
+            lastUpdated: nowStr,
+            lastUpdatedBy: employeeInfo,
+            inputLogs: [newLog, ...(p.inputLogs || [])],
+          };
+        });
+
+        // Compute updated health status
+        let penalty = 0;
+        updatedParams.forEach((p) => {
+          if (p.status === 'critical') penalty += p.priority === 'High Priority' ? 30 : 15;
+          else if (p.status === 'warning') penalty += p.priority === 'High Priority' ? 15 : 8;
+        });
+        const newScore = Math.max(15, Math.min(100, 100 - penalty));
+        let newStatus = eq.status;
+        if (newScore < 50) newStatus = 'critical';
+        else if (newScore < 75) newStatus = 'warning';
+        else if (eq.status !== 'maintenance' && eq.status !== 'offline') newStatus = 'healthy';
+
+        return {
+          ...eq,
+          healthScore: newScore,
+          status: newStatus,
+          parameters: updatedParams,
+        };
+      })
+    );
+
+    return { success: true };
+  };
+
+  // Batch Record Parameters (Shift walk-down checklist for ALL employees)
+  const batchRecordParameters = (
+    equipmentId: string,
+    updates: {
+      parameterId: string;
+      value: string;
+      status: 'healthy' | 'warning' | 'critical';
+      notes?: string;
+    }[],
+    shift?: 'Shift A (Morning)' | 'Shift B (Evening)' | 'Shift C (Night)' | 'General Shift'
+  ): { success: boolean; error?: string } => {
+    const targetEq = equipmentList.find((e) => e.id === equipmentId);
+    if (!targetEq) return { success: false, error: 'Equipment not found.' };
+
+    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const employeeInfo = currentUser
+      ? {
+          id: currentUser.id,
+          employeeId: currentUser.employeeId,
+          name: currentUser.name,
+          role: currentUser.role,
+          designation: currentUser.designation,
+          avatarUrl: currentUser.avatarUrl,
+        }
+      : {
+          id: 'EMP-GEN',
+          employeeId: 'GEN-001',
+          name: 'Shift Technician',
+          role: 'non_management' as const,
+          designation: 'Field Inspection Technician',
+        };
+
+    const newLogs: ParameterInputLog[] = updates.map((u, idx) => ({
+      id: `LOG-${Date.now().toString().slice(-6)}-${idx}`,
+      parameterId: u.parameterId,
+      parameterName: targetEq.parameters?.find((p) => p.id === u.parameterId)?.name || 'Health Parameter',
+      equipmentId: targetEq.id,
+      equipmentName: targetEq.name,
+      timestamp: nowStr,
+      value: u.value,
+      status: u.status,
+      notes: u.notes,
+      shift: shift || 'General Shift',
+      inputBy: employeeInfo,
+    }));
+
+    setParameterInputLogs((prev) => [...newLogs, ...prev]);
+
+    const updateMap = new Map(updates.map((u, idx) => [u.parameterId, { ...u, log: newLogs[idx] }]));
+
+    setEquipmentList((prev) =>
+      prev.map((eq) => {
+        if (eq.id !== equipmentId) return eq;
+        const currentParams = eq.parameters || [];
+        const updatedParams = currentParams.map((p) => {
+          const u = updateMap.get(p.id);
+          if (!u) return p;
+          return {
+            ...p,
+            currentValue: u.value,
+            status: u.status,
+            notes: u.notes,
+            lastUpdated: nowStr,
+            lastUpdatedBy: employeeInfo,
+            inputLogs: [u.log, ...(p.inputLogs || [])],
+          };
+        });
+
+        let penalty = 0;
+        updatedParams.forEach((p) => {
+          if (p.status === 'critical') penalty += p.priority === 'High Priority' ? 30 : 15;
+          else if (p.status === 'warning') penalty += p.priority === 'High Priority' ? 15 : 8;
+        });
+        const newScore = Math.max(15, Math.min(100, 100 - penalty));
+        let newStatus = eq.status;
+        if (newScore < 50) newStatus = 'critical';
+        else if (newScore < 75) newStatus = 'warning';
+        else if (eq.status !== 'maintenance' && eq.status !== 'offline') newStatus = 'healthy';
+
+        return {
+          ...eq,
+          healthScore: newScore,
+          status: newStatus,
+          parameters: updatedParams,
+        };
+      })
+    );
+
+    return { success: true };
+  };
+
+  // Update Physical & Standard Data (Strictly Restricted to Management Employees!)
+  const updatePhysicalAndStandardData = (
+    equipmentId: string,
+    physicalUpdates: Partial<Equipment>,
+    parameterUpdates?: HealthParameterItem[]
+  ): { success: boolean; error?: string } => {
+    if (!isManagementEmployee) {
+      return {
+        success: false,
+        error: 'Unauthorized: Only Management Employees (Directors, Managers, and Supervisors) can edit physical equipment data and calibrate standard benchmark specifications.',
+      };
+    }
+
+    setEquipmentList((prev) =>
+      prev.map((eq) => {
+        if (eq.id !== equipmentId) return eq;
+        return {
+          ...eq,
+          ...physicalUpdates,
+          parameters: parameterUpdates || eq.parameters,
+        };
+      })
+    );
+
+    return { success: true };
+  };
+
   const resetAllDataToDefaults = () => {
     setEquipmentList(INITIAL_EQUIPMENT);
     setEquipmentRequests(INITIAL_EQUIPMENT_REQUESTS as EquipmentRequest[]);
     setMaintenanceRecords(INITIAL_MAINTENANCE_RECORDS);
     setAlerts(INITIAL_ALERTS);
+    setParameterInputLogs(INITIAL_PARAMETER_INPUT_LOGS);
     localStorage.removeItem(STORAGE_KEYS.EQUIPMENT);
     localStorage.removeItem(STORAGE_KEYS.EQUIPMENT_REQUESTS);
     localStorage.removeItem(STORAGE_KEYS.RECORDS);
     localStorage.removeItem(STORAGE_KEYS.ALERTS);
+    localStorage.removeItem(STORAGE_KEYS.PARAM_LOGS);
   };
 
   const exportRecordsToCSV = () => {
@@ -798,6 +1117,25 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         closeWorkUpdateModal,
         openEquipmentRequestModal,
         closeEquipmentRequestModal,
+
+        // Parameter Manual Input & Management Data Editing
+        parameterInputLogs,
+        manualInputModalOpen,
+        targetParamForInput,
+        openManualInputModal,
+        closeManualInputModal,
+        recordParameterValue,
+        batchRecordParameters,
+        editPhysicalStandardModalOpen,
+        targetEquipmentForPhysicalEdit,
+        openEditPhysicalStandardModal,
+        closeEditPhysicalStandardModal,
+        updatePhysicalAndStandardData,
+        auditModalOpen,
+        auditEquipmentId,
+        auditParameterId,
+        openAuditModal,
+        closeAuditModal,
 
         resetAllDataToDefaults,
         exportRecordsToCSV,
