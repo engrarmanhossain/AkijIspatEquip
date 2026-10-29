@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
-  Lock,
-  Mail,
   EyeOff,
   AlertCircle,
   CheckCircle2,
   X,
-  ShieldCheck,
-  Building,
-  UserCheck,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -23,7 +18,6 @@ export const LoginPage: React.FC = () => {
 
   // Helper modals
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
-  const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [forgotSubmitted, setForgotSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,20 +32,6 @@ export const LoginPage: React.FC = () => {
       }
       setIsSubmitting(false);
     }, 350);
-  };
-
-  const handleDemoFill = (role: 'admin' | 'manager' | 'tech') => {
-    setErrorMessage(null);
-    if (role === 'admin') {
-      setEmail('armanhossain.eee.info@gmail.com');
-      setPassword('arman2026**');
-    } else if (role === 'manager') {
-      setEmail('marcus.vance@plant04.com');
-      setPassword('manager2026');
-    } else {
-      setEmail('david.chen@plant04.com');
-      setPassword('tech2026');
-    }
   };
 
   return (
@@ -165,47 +145,6 @@ export const LoginPage: React.FC = () => {
               {isSubmitting ? 'AUTHENTICATING...' : 'LOGIN'}
             </button>
           </form>
-
-          {/* Don't have an account? + Raised Circle Button */}
-          <div className="flex items-center justify-center space-x-3 pt-6 text-xs text-slate-500 font-medium select-none">
-            <span>Don't have an account?</span>
-            <button
-              type="button"
-              onClick={() => setRegisterModalOpen(true)}
-              title="Request New Account Access"
-              className="w-8 h-8 rounded-full neu-circle-btn flex items-center justify-center text-blue-600 font-bold text-lg leading-none cursor-pointer"
-            >
-              +
-            </button>
-          </div>
-
-          {/* Social / SSO Circular Raised Buttons at Bottom (G, f, in) */}
-          <div className="flex items-center justify-center space-x-4 pt-4 pb-1">
-            <button
-              type="button"
-              onClick={() => handleDemoFill('admin')}
-              title="Admin Quick Fill (Arman Hossain)"
-              className="w-9 h-9 rounded-full neu-circle-btn flex items-center justify-center text-slate-600 hover:text-blue-600 font-bold text-xs cursor-pointer select-none"
-            >
-              G
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoFill('manager')}
-              title="Manager Quick Fill"
-              className="w-9 h-9 rounded-full neu-circle-btn flex items-center justify-center text-slate-600 hover:text-blue-600 font-bold text-xs cursor-pointer select-none"
-            >
-              f
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoFill('tech')}
-              title="LinkedIn Sign In"
-              className="w-9 h-9 rounded-full neu-circle-btn flex items-center justify-center text-slate-600 hover:text-blue-600 font-bold text-xs cursor-pointer select-none"
-            >
-              in
-            </button>
-          </div>
         </div>
       </div>
 
@@ -259,51 +198,6 @@ export const LoginPage: React.FC = () => {
                   </button>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Request Access / Account Modal */}
-      {registerModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm rounded-[32px] neu-card p-6 relative">
-            <button
-              onClick={() => setRegisterModalOpen(false)}
-              className="absolute top-5 right-5 p-1.5 rounded-full neu-circle-btn text-slate-500 hover:text-slate-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center space-y-3 pt-2">
-              <div className="w-14 h-14 mx-auto rounded-full neu-badge-raised flex items-center justify-center text-2xl">
-                📋
-              </div>
-              <h3 className="text-lg font-bold text-slate-800">New Staff Registration</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Staff accounts (Management and Non-Management) are provisioned directly by the Plant Administrator:
-              </p>
-
-              <div className="p-3.5 rounded-2xl neu-groove-inset text-left space-y-1.5 text-xs text-slate-700">
-                <div className="flex items-center space-x-2">
-                  <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-semibold">Plant Director & Admin:</span>
-                </div>
-                <p className="font-mono text-[11px] text-blue-700 pl-6">
-                  armanhossain.eee.info@gmail.com
-                </p>
-                <p className="text-[10px] text-slate-500 pl-6">
-                  Contact admin to receive official Employee ID & login password.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setRegisterModalOpen(false)}
-                className="w-full py-2.5 rounded-xl neu-button-raised text-blue-600 font-bold text-xs uppercase mt-3"
-              >
-                Got It
-              </button>
             </div>
           </div>
         </div>
