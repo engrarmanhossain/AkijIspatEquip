@@ -10,8 +10,6 @@ import {
   ChevronRight,
   TrendingUp,
   Cpu,
-  Layers,
-  Zap,
   ArrowUpRight,
   Calendar,
   PlusCircle,

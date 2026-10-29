@@ -17,7 +17,6 @@ import {
   LogOut,
   User,
   ChevronDown,
-  ShieldCheck,
   Building,
   FileCheck2,
   Settings,

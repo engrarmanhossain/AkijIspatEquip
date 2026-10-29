@@ -7,10 +7,7 @@ import {
   Upload,
   Image as ImageIcon,
   CheckCircle2,
-  Clock,
   Camera,
-  Activity,
-  Layers,
 } from 'lucide-react';
 import type { WorkProgressUpdate } from '../types';
 

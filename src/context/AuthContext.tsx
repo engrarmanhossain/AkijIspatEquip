@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Employee, UserRole, CompanySettings } from '../types';
+import type { Employee, CompanySettings } from '../types';
 import { INITIAL_EMPLOYEES } from '../data/initialEmployees';
 
 interface AuthContextType {

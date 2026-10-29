@@ -7,7 +7,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   CartesianGrid,
   LineChart,
   Line,
@@ -19,9 +18,6 @@ import {
   Clock,
   DollarSign,
   AlertTriangle,
-  Award,
-  Layers,
-  ArrowUpRight,
 } from 'lucide-react';
 
 export const AnalyticsTab: React.FC = () => {

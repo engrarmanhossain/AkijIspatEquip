@@ -5,13 +5,6 @@ import {
   X,
   FileCheck2,
   CheckCircle2,
-  XCircle,
-  Clock,
-  Shield,
-  Layers,
-  Trash2,
-  PlusCircle,
-  AlertCircle,
   User,
 } from 'lucide-react';
 

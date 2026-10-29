@@ -8,11 +8,7 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   AlertCircle,
-  Tag,
-  MapPin,
-  Clock,
   Shield,
-  Layers,
 } from 'lucide-react';
 import type { EquipmentCategory, Equipment } from '../types';
 
@@ -24,7 +20,7 @@ export const AddEquipmentModal: React.FC = () => {
     submitEquipmentRequest,
   } = useDashboard();
 
-  const { currentUser, isManager, isLowerManagement, isAdmin } = useAuth();
+  const { currentUser, isManager, isAdmin } = useAuth();
 
   const [name, setName] = useState('');
   const [tag, setTag] = useState('');

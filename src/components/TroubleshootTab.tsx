@@ -2,23 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import {
   Wrench,
-  AlertTriangle,
   Search,
-  CheckCircle2,
-  HelpCircle,
   FileText,
   ShieldAlert,
-  ArrowRight,
-  Sparkles,
-  Layers,
   Clock,
   Package,
-  UserCheck,
   CheckSquare,
   Square,
-  Flame,
 } from 'lucide-react';
-import type { TroubleshootingGuide } from '../types';
 
 export const TroubleshootTab: React.FC = () => {
   const {

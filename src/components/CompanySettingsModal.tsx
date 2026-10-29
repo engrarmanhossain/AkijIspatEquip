@@ -13,9 +13,7 @@ import {
   ExternalLink,
   Cloud,
   Database,
-  Lock,
   RefreshCw,
-  Sparkles,
   FileCode,
   Copy,
   Download,
@@ -323,10 +321,10 @@ function jsonResponse(obj) {
 
     try {
       const pingUrl = `${googleAppsScriptUrl.trim()}${googleAppsScriptUrl.includes('?') ? '&' : '?'}action=ping`;
-      const res = await fetch(pingUrl, { mode: 'no-cors' });
+      await fetch(pingUrl, { mode: 'no-cors' });
       setIsTestingSync(false);
       setTestSyncResult('✓ Endpoint reachable! Web App URL responded successfully.');
-    } catch (e: any) {
+    } catch {
       setIsTestingSync(false);
       setTestSyncResult('✓ Connection verified! Google Sheet & Drive endpoints reachable.');
     }
@@ -416,7 +414,7 @@ function jsonResponse(obj) {
 
       setIsSyncingNow(false);
       setSyncNowStatus('✓ Cloud sync triggered! All Equipment, Maintenance Records, and Staff pushed to Google Sheets.');
-    } catch (err: any) {
+    } catch {
       setIsSyncingNow(false);
       setSyncNowStatus('✓ Cloud sync executed and sent to Google Cloud endpoint.');
     }

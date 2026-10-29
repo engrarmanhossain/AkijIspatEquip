@@ -5,11 +5,7 @@ import {
   ClipboardList,
   Plus,
   Trash2,
-  DollarSign,
-  Clock,
-  Wrench,
   Package,
-  UserCheck,
   CheckCircle2,
 } from 'lucide-react';
 import type {

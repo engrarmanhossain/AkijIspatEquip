@@ -9,7 +9,6 @@ import {
   Activity,
   Thermometer,
   Gauge,
-  CheckCircle2,
 } from 'lucide-react';
 
 export const FaultInjectorModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({

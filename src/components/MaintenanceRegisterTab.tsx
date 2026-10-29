@@ -13,13 +13,6 @@ import {
   ChevronUp,
   Edit,
   Trash2,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Package,
-  Wrench,
-  DollarSign,
-  Calendar,
   ExternalLink,
 } from 'lucide-react';
 import type {

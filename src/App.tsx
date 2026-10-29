@@ -17,7 +17,7 @@ import { CompanySettingsModal } from './components/CompanySettingsModal';
 import { AddEquipmentModal } from './components/AddEquipmentModal';
 import { WorkUpdateModal } from './components/WorkUpdateModal';
 import { EquipmentRequestsModal } from './components/EquipmentRequestsModal';
-import { Shield, Cpu, Activity } from 'lucide-react';
+import { Shield, Activity } from 'lucide-react';
 
 const DashboardContent: React.FC = () => {
   const { activeTab } = useDashboard();
