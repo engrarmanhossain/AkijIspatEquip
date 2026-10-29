@@ -25,6 +25,14 @@ export default async function handler(req: any, res: any) {
       });
       const data = await upstashRes.json();
       const parsed = data.result ? JSON.parse(data.result) : {};
+      if (parsed.companySettings) {
+        if (!parsed.companySettings.googleDriveFolderUrl || parsed.companySettings.googleDriveFolderUrl.includes('1_EquipGuard_Plant04_Uploads')) {
+          parsed.companySettings.googleDriveFolderUrl = 'https://drive.google.com/drive/my-drive';
+        }
+        if (!parsed.companySettings.googleSpreadsheetUrl || parsed.companySettings.googleSpreadsheetUrl.includes('1_EquipGuard_Industrial_CMMS_DB')) {
+          parsed.companySettings.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/';
+        }
+      }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       return res.status(200).json(parsed);
@@ -81,13 +89,21 @@ export default async function handler(req: any, res: any) {
         });
       }
 
+      const mergedCompanySettings = {
+        ...(existing.companySettings || {}),
+        ...(incoming.companySettings || {}),
+      };
+      if (!mergedCompanySettings.googleDriveFolderUrl || mergedCompanySettings.googleDriveFolderUrl.includes('1_EquipGuard_Plant04_Uploads')) {
+        mergedCompanySettings.googleDriveFolderUrl = 'https://drive.google.com/drive/my-drive';
+      }
+      if (!mergedCompanySettings.googleSpreadsheetUrl || mergedCompanySettings.googleSpreadsheetUrl.includes('1_EquipGuard_Industrial_CMMS_DB')) {
+        mergedCompanySettings.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/';
+      }
+
       const merged = {
         ...existing,
         ...incoming,
-        companySettings: {
-          ...(existing.companySettings || {}),
-          ...(incoming.companySettings || {}),
-        },
+        companySettings: mergedCompanySettings,
         employees: mergedEmployees.length > 0 ? mergedEmployees : existing.employees,
         lastSyncedAt: new Date().toISOString(),
       };

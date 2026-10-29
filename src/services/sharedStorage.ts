@@ -41,6 +41,14 @@ async function fetchFromCloudStore(): Promise<SharedStoreData | null> {
       if (data && data.result) {
         const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
         if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          if (parsed.companySettings) {
+            if (!parsed.companySettings.googleDriveFolderUrl || parsed.companySettings.googleDriveFolderUrl.includes('1_EquipGuard_Plant04_Uploads')) {
+              parsed.companySettings.googleDriveFolderUrl = 'https://drive.google.com/drive/my-drive';
+            }
+            if (!parsed.companySettings.googleSpreadsheetUrl || parsed.companySettings.googleSpreadsheetUrl.includes('1_EquipGuard_Industrial_CMMS_DB')) {
+              parsed.companySettings.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/';
+            }
+          }
           return parsed;
         }
       }
@@ -77,13 +85,21 @@ async function saveToCloudStore(partial: Partial<SharedStoreData>): Promise<bool
       });
     }
 
+    const mergedCompanySettings = {
+      ...(existing.companySettings || {}),
+      ...(partial.companySettings || {}),
+    };
+    if (!mergedCompanySettings.googleDriveFolderUrl || mergedCompanySettings.googleDriveFolderUrl.includes('1_EquipGuard_Plant04_Uploads')) {
+      mergedCompanySettings.googleDriveFolderUrl = 'https://drive.google.com/drive/my-drive';
+    }
+    if (!mergedCompanySettings.googleSpreadsheetUrl || mergedCompanySettings.googleSpreadsheetUrl.includes('1_EquipGuard_Industrial_CMMS_DB')) {
+      mergedCompanySettings.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/';
+    }
+
     const mergedData: SharedStoreData = {
       ...existing,
       ...partial,
-      companySettings: {
-        ...(existing.companySettings || {}),
-        ...(partial.companySettings || {}),
-      },
+      companySettings: mergedCompanySettings,
       employees: mergedEmployees.length > 0 ? mergedEmployees : existing.employees,
       lastSyncedAt: new Date().toISOString(),
     };

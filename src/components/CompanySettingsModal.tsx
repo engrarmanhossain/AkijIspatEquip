@@ -102,7 +102,7 @@ export const CompanySettingsModal: React.FC = () => {
 
   // Helper to extract folder ID from Google Drive URL
   const extractDriveFolderId = (url: string) => {
-    if (!url || !url.trim()) return 'YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE';
+    if (!url || !url.trim() || url.includes('my-drive') || url.includes('1_EquipGuard_Plant04_Uploads')) return 'YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE';
     const clean = url.trim();
     const match = clean.match(/folders\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) return match[1];

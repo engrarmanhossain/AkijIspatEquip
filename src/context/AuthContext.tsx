@@ -42,14 +42,25 @@ const AUTH_STORAGE_KEYS = {
 };
 
 const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
-  companyName: 'EquipGuard Industrial',
-  plantCode: 'PLANT 04 — MAIN FACILITY',
-  logoUrl: '',
+  companyName: 'Akij Steel Mills Limited',
+  plantCode: 'AKIJ-PLANT-01',
+  logoUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDZhNWQ2Ii8+PC9zdmc+',
   tagline: 'Condition-Based Asset Intelligence & Maintenance Register',
-  googleDriveFolderUrl: 'https://drive.google.com/drive/folders/1_EquipGuard_Plant04_Uploads',
-  googleSpreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1_EquipGuard_Industrial_CMMS_DB',
+  googleDriveFolderUrl: 'https://drive.google.com/drive/my-drive',
+  googleSpreadsheetUrl: 'https://docs.google.com/spreadsheets/',
   googleAppsScriptUrl: '',
   syncEnabled: false,
+};
+
+export const normalizeCompanySettings = (settings: CompanySettings): CompanySettings => {
+  const normalized = { ...settings };
+  if (!normalized.googleDriveFolderUrl || normalized.googleDriveFolderUrl.includes('1_EquipGuard_Plant04_Uploads')) {
+    normalized.googleDriveFolderUrl = 'https://drive.google.com/drive/my-drive';
+  }
+  if (!normalized.googleSpreadsheetUrl || normalized.googleSpreadsheetUrl.includes('1_EquipGuard_Industrial_CMMS_DB')) {
+    normalized.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/';
+  }
+  return normalized;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,9 +88,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [companySettings, setCompanySettings] = useState<CompanySettings>(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEYS.COMPANY_SETTINGS);
-      return saved ? { ...DEFAULT_COMPANY_SETTINGS, ...JSON.parse(saved) } : DEFAULT_COMPANY_SETTINGS;
+      return normalizeCompanySettings(
+        saved ? { ...DEFAULT_COMPANY_SETTINGS, ...JSON.parse(saved) } : DEFAULT_COMPANY_SETTINGS
+      );
     } catch {
-      return DEFAULT_COMPANY_SETTINGS;
+      return normalizeCompanySettings(DEFAULT_COMPANY_SETTINGS);
     }
   });
 
@@ -138,9 +151,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 2. Company Settings Sync
         if (shared.companySettings) {
           setCompanySettings((prev) => {
-            const merged = { ...prev, ...shared.companySettings };
+            const normalizedShared = normalizeCompanySettings(shared.companySettings!);
+            const merged = { ...prev, ...normalizedShared };
             // Never overwrite existing valid logo with empty string from defaults
-            if (!shared.companySettings?.logoUrl && prev.logoUrl) {
+            if (!normalizedShared.logoUrl && prev.logoUrl) {
               merged.logoUrl = prev.logoUrl;
             }
             const hasChanged = JSON.stringify(prev) !== JSON.stringify(merged);
@@ -301,10 +315,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Unauthorized: Only System Administrator can modify Company Name and Logo.' };
     }
 
-    const updated = {
+    const updated = normalizeCompanySettings({
       ...companySettings,
       ...settings,
-    };
+    });
 
     setCompanySettings(updated);
 

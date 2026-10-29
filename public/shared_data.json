@@ -3,7 +3,9 @@
     "companyName": "Akij Steel Mills Limited",
     "plantCode": "AKIJ-PLANT-01",
     "logoUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjMDZhNWQ2Ii8+PC9zdmc+",
-    "tagline": "Condition-Based Asset Intelligence & Maintenance Register"
+    "tagline": "Condition-Based Asset Intelligence & Maintenance Register",
+    "googleDriveFolderUrl": "https://drive.google.com/drive/my-drive",
+    "googleSpreadsheetUrl": "https://docs.google.com/spreadsheets/"
   },
   "employees": [
     {
