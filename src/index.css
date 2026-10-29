@@ -62,3 +62,110 @@
     display: block !important;
   }
 }
+
+/* ==========================================================================
+   Neumorphic (Soft UI) Design System
+   ========================================================================== */
+.neu-bg {
+  background-color: #ebf0f7;
+}
+
+/* Elevated Soft Card */
+.neu-card {
+  background: #ebf0f7;
+  box-shadow: 
+    16px 16px 36px #c5cbd5,
+    -16px -16px 36px #ffffff;
+}
+
+/* Circular Raised Element (Top Lock Badge & Bottom Circular Buttons) */
+.neu-badge-raised {
+  background: #ebf0f7;
+  box-shadow: 
+    7px 7px 16px #caced4,
+    -7px -7px 16px #ffffff;
+}
+
+/* Deep Inset / Concave Groove (Inputs) */
+.neu-groove-inset {
+  background: #ebf0f7;
+  box-shadow: 
+    inset 4px 4px 8px #c8ced6,
+    inset -4px -4px 8px #ffffff;
+  transition: all 0.25s ease;
+}
+
+.neu-groove-inset:focus-within {
+  box-shadow: 
+    inset 5px 5px 10px #bec4cc,
+    inset -5px -5px 10px #ffffff,
+    0 0 0 1.5px rgba(37, 99, 235, 0.4);
+}
+
+/* Elevated Tactile Button (LOGIN) */
+.neu-button-raised {
+  background: #ebf0f7;
+  box-shadow: 
+    8px 8px 18px #c5cbd5,
+    -8px -8px 18px #ffffff;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-button-raised:hover {
+  box-shadow: 
+    10px 10px 22px #bbc1cb,
+    -10px -10px 22px #ffffff;
+  transform: translateY(-1px);
+}
+
+.neu-button-raised:active {
+  box-shadow: 
+    inset 4px 4px 8px #c5cbd5,
+    inset -4px -4px 8px #ffffff;
+  transform: translateY(1px);
+}
+
+/* Circular Soft Icon Button (+ and social circles) */
+.neu-circle-btn {
+  background: #ebf0f7;
+  box-shadow: 
+    5px 5px 11px #caced4,
+    -5px -5px 11px #ffffff;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-circle-btn:hover {
+  box-shadow: 
+    7px 7px 14px #bec4cc,
+    -7px -7px 14px #ffffff;
+  transform: scale(1.06);
+}
+
+.neu-circle-btn:active {
+  box-shadow: 
+    inset 3px 3px 6px #caced4,
+    inset -3px -3px 6px #ffffff;
+  transform: scale(0.96);
+}
+
+/* Soft Checkbox */
+.neu-checkbox {
+  background: #ebf0f7;
+  box-shadow: 
+    inset 2px 2px 4px #caced4,
+    inset -2px -2px 4px #ffffff;
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.neu-checkbox:checked {
+  background: #2563eb;
+  box-shadow: 
+    2px 2px 5px #caced4,
+    -2px -2px 5px #ffffff;
+}
+
