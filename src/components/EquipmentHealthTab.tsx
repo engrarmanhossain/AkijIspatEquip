@@ -687,7 +687,8 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
           const isSelected = activeSensorObj?.key === item.key;
           const s = item.sensor;
           const Icon = item.icon;
-          const pct = Math.min(100, Math.max(0, (s.value / s.max) * 100));
+          const sMax = s.max && s.max > 0 ? s.max : 100;
+          const pct = Math.min(100, Math.max(0, (s.value / sMax) * 100));
           const isCritical = s.criticalThreshold > s.warningThreshold 
             ? s.value >= s.criticalThreshold 
             : s.value <= s.criticalThreshold;
@@ -836,7 +837,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
                   stroke="#64748b"
                   fontSize={11}
                   tickLine={false}
-                  domain={[0, Math.ceil(currentSensor.max * 1.05)]}
+                  domain={[0, Math.ceil((currentSensor.max || 100) * 1.05)]}
                   unit={` ${currentSensor.unit}`}
                 />
                 <Tooltip

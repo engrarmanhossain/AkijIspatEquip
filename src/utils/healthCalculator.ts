@@ -16,15 +16,50 @@ export interface EquipmentHealthAssessment {
 }
 
 /**
- * Parses numeric value from a manual parameter string
- * e.g. "615V DC, Ripple 2.1V" -> 615
- * e.g. "58.2°C" -> 58.2
- * e.g. "Armature 1640A" -> 1640
- * e.g. "2.3 mm/s RMS" -> 2.3
+ * Context-aware numeric parser that prioritizes numbers associated with specific engineering units
+ * e.g. "0.8% Phase Imbalance (U: 582A, V: 580A)" for Current -> 582 (not 0.8)
+ * e.g. "100% clear optics; Air purge pressure 1.85 bar stable" for Pressure -> 1.85 (not 100)
+ * e.g. "DE: 64°C, 2.3 mm/s RMS" for Temp -> 64; for Vibration -> 2.3
  */
-export function extractNumericValue(text: string): number | null {
+export function extractNumericValue(
+  text: string,
+  unitHint?: 'voltage' | 'current' | 'temperature' | 'vibration' | 'pressure'
+): number | null {
   if (!text) return null;
-  // Look for first integer or floating point number
+
+  if (unitHint === 'voltage') {
+    const m = text.match(/(\d+(?:\.\d+)?)\s*(?:v\s*dc|v\s*ac|kv|v)\b/i);
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (!isNaN(n)) return n;
+    }
+  } else if (unitHint === 'current') {
+    const m = text.match(/(\d+(?:\.\d+)?)\s*(?:amps?|ma|a)\b/i);
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (!isNaN(n)) return n;
+    }
+  } else if (unitHint === 'temperature') {
+    const m = text.match(/(\d+(?:\.\d+)?)\s*(?:°c|deg\s*c|c)\b/i);
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (!isNaN(n)) return n;
+    }
+  } else if (unitHint === 'vibration') {
+    const m = text.match(/(\d+(?:\.\d+)?)\s*(?:mm\/s|g-pk|mils)\b/i);
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (!isNaN(n)) return n;
+    }
+  } else if (unitHint === 'pressure') {
+    const m = text.match(/(\d+(?:\.\d+)?)\s*(?:bar|mbar|psi|kpa)\b/i);
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (!isNaN(n)) return n;
+    }
+  }
+
+  // Fallback to first standalone numeric match
   const match = text.match(/[-+]?\d*\.?\d+/);
   if (match) {
     const num = parseFloat(match[0]);
@@ -189,9 +224,6 @@ export function synchronizeTelemetryFromParameters(
   const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   parameters.forEach((param) => {
-    const val = extractNumericValue(param.currentValue);
-    if (val === null) return;
-
     const lowerName = param.name.toLowerCase();
     const lowerUnit = (param.unit || '').toLowerCase();
 
@@ -202,8 +234,11 @@ export function synchronizeTelemetryFromParameters(
       !lowerUnit.includes('mm/s') &&
       updated.voltage
     ) {
-      const history = [...(updated.voltage.history || []).slice(1), { timestamp: nowTime, val }];
-      updated.voltage = { ...updated.voltage, value: val, history };
+      const val = extractNumericValue(param.currentValue, 'voltage');
+      if (val !== null) {
+        const history = [...(updated.voltage.history || []).slice(1), { timestamp: nowTime, val }];
+        updated.voltage = { ...updated.voltage, value: val, history };
+      }
     }
 
     // Current sync
@@ -211,13 +246,16 @@ export function synchronizeTelemetryFromParameters(
       (lowerName.includes('current') || lowerUnit.includes('a') || lowerUnit.includes('amp')) &&
       !lowerName.includes('voltage')
     ) {
-      if (updated.current) {
-        const history = [...(updated.current.history || []).slice(1), { timestamp: nowTime, val }];
-        updated.current = { ...updated.current, value: val, history };
-      }
-      if (updated.motorLoad && !updated.current) {
-        const history = [...(updated.motorLoad.history || []).slice(1), { timestamp: nowTime, val }];
-        updated.motorLoad = { ...updated.motorLoad, value: val, history };
+      const val = extractNumericValue(param.currentValue, 'current');
+      if (val !== null) {
+        if (updated.current) {
+          const history = [...(updated.current.history || []).slice(1), { timestamp: nowTime, val }];
+          updated.current = { ...updated.current, value: val, history };
+        }
+        if (updated.motorLoad && !updated.current) {
+          const history = [...(updated.motorLoad.history || []).slice(1), { timestamp: nowTime, val }];
+          updated.motorLoad = { ...updated.motorLoad, value: val, history };
+        }
       }
     }
 
@@ -226,8 +264,11 @@ export function synchronizeTelemetryFromParameters(
       (lowerName.includes('temp') || lowerName.includes('oti') || lowerName.includes('wti') || lowerUnit.includes('°c')) &&
       updated.temperature
     ) {
-      const history = [...(updated.temperature.history || []).slice(1), { timestamp: nowTime, val }];
-      updated.temperature = { ...updated.temperature, value: val, history };
+      const val = extractNumericValue(param.currentValue, 'temperature');
+      if (val !== null) {
+        const history = [...(updated.temperature.history || []).slice(1), { timestamp: nowTime, val }];
+        updated.temperature = { ...updated.temperature, value: val, history };
+      }
     }
 
     // Vibration sync
@@ -235,8 +276,11 @@ export function synchronizeTelemetryFromParameters(
       (lowerName.includes('vibration') || lowerUnit.includes('mm/s')) &&
       updated.vibration
     ) {
-      const history = [...(updated.vibration.history || []).slice(1), { timestamp: nowTime, val }];
-      updated.vibration = { ...updated.vibration, value: val, history };
+      const val = extractNumericValue(param.currentValue, 'vibration');
+      if (val !== null) {
+        const history = [...(updated.vibration.history || []).slice(1), { timestamp: nowTime, val }];
+        updated.vibration = { ...updated.vibration, value: val, history };
+      }
     }
 
     // Pressure sync
@@ -244,8 +288,11 @@ export function synchronizeTelemetryFromParameters(
       (lowerName.includes('pressure') || lowerUnit.includes('bar') || lowerUnit.includes('pa')) &&
       updated.pressure
     ) {
-      const history = [...(updated.pressure.history || []).slice(1), { timestamp: nowTime, val }];
-      updated.pressure = { ...updated.pressure, value: val, history };
+      const val = extractNumericValue(param.currentValue, 'pressure');
+      if (val !== null) {
+        const history = [...(updated.pressure.history || []).slice(1), { timestamp: nowTime, val }];
+        updated.pressure = { ...updated.pressure, value: val, history };
+      }
     }
   });
 

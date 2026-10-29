@@ -355,6 +355,44 @@ export const ManualParameterInputModal: React.FC = () => {
                 onChange={(e) => setMeasuredValue(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
               />
+              {currentParamObj && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] text-slate-500">Quick Presets:</span>
+                  {currentParamObj.unit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!measuredValue.includes(currentParamObj.unit!)) {
+                          setMeasuredValue((prev) => (prev ? `${prev} ${currentParamObj.unit}` : `Nominal ${currentParamObj.unit}`));
+                        }
+                      }}
+                      className="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono transition"
+                    >
+                      + {currentParamObj.unit}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMeasuredValue('Nominal in-spec');
+                      setStatus('healthy');
+                    }}
+                    className="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 transition"
+                  >
+                    Nominal in-spec
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStatus('warning');
+                      setNotes('Elevated reading observed during shift walkdown');
+                    }}
+                    className="px-2 py-0.5 rounded text-[10px] bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border border-amber-800/40 transition"
+                  >
+                    Elevated Warning
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Condition / Status Selection */}

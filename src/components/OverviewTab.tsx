@@ -15,6 +15,7 @@ import {
   PlusCircle,
   FileCheck2,
   Image as ImageIcon,
+  Zap,
 } from 'lucide-react';
 import type { HealthStatus } from '../types';
 
@@ -32,6 +33,7 @@ export const OverviewTab: React.FC = () => {
     openAddEquipmentModal,
     openEquipmentRequestModal,
     acknowledgeAlert,
+    openManualInputModal,
   } = useDashboard();
 
   const { isManager, isAdmin } = useAuth();
@@ -323,43 +325,71 @@ export const OverviewTab: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Sensor Badges / Key Telemetry */}
+                    {/* Sensor Badges / Key Telemetry (Safely rendered with Voltage, Current, Vibration, or Temp) */}
                     <div className="mt-4 grid grid-cols-2 gap-2.5 text-xs">
-                      {/* Vibration */}
+                      {/* Telemetry Channel 1: Voltage or Vibration */}
                       <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 group-hover:border-slate-700/80 transition">
-                        <span className="text-[10px] uppercase text-slate-400 block font-semibold tracking-wider">Vibration</span>
+                        <span className="text-[10px] uppercase text-slate-400 block font-semibold tracking-wider flex items-center gap-1">
+                          {eq.telemetry.voltage ? (
+                            <><Zap className="w-3 h-3 text-amber-400" /> Voltage</>
+                          ) : (
+                            <><Activity className="w-3 h-3 text-cyan-400" /> Vibration</>
+                          )}
+                        </span>
                         <div className="flex items-baseline space-x-1.5 mt-1">
                           <span
                             className={`font-mono text-sm font-bold ${
-                              eq.telemetry.vibration.value >= eq.telemetry.vibration.criticalThreshold
+                              eq.telemetry.voltage
+                                ? eq.telemetry.voltage.value >= eq.telemetry.voltage.criticalThreshold
+                                  ? 'text-rose-400'
+                                  : eq.telemetry.voltage.value >= eq.telemetry.voltage.warningThreshold
+                                  ? 'text-amber-400'
+                                  : 'text-slate-100'
+                                : eq.telemetry.vibration && eq.telemetry.vibration.value >= eq.telemetry.vibration.criticalThreshold
                                 ? 'text-rose-400'
-                                : eq.telemetry.vibration.value >= eq.telemetry.vibration.warningThreshold
+                                : eq.telemetry.vibration && eq.telemetry.vibration.value >= eq.telemetry.vibration.warningThreshold
                                 ? 'text-amber-400'
                                 : 'text-slate-100'
                             }`}
                           >
-                            {eq.telemetry.vibration.value}
+                            {eq.telemetry.voltage?.value ?? eq.telemetry.vibration?.value ?? 'N/A'}
                           </span>
-                          <span className="text-[10px] text-slate-400">{eq.telemetry.vibration.unit}</span>
+                          <span className="text-[10px] text-slate-400">
+                            {eq.telemetry.voltage?.unit ?? eq.telemetry.vibration?.unit ?? ''}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Temperature */}
+                      {/* Telemetry Channel 2: Current or Temperature */}
                       <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 group-hover:border-slate-700/80 transition">
-                        <span className="text-[10px] uppercase text-slate-400 block font-semibold tracking-wider">Temperature</span>
+                        <span className="text-[10px] uppercase text-slate-400 block font-semibold tracking-wider flex items-center gap-1">
+                          {eq.telemetry.current ? (
+                            <><Zap className="w-3 h-3 text-yellow-400" /> Current</>
+                          ) : (
+                            <>Temperature</>
+                          )}
+                        </span>
                         <div className="flex items-baseline space-x-1.5 mt-1">
                           <span
                             className={`font-mono text-sm font-bold ${
-                              eq.telemetry.temperature.value >= eq.telemetry.temperature.criticalThreshold
+                              eq.telemetry.current
+                                ? eq.telemetry.current.value >= eq.telemetry.current.criticalThreshold
+                                  ? 'text-rose-400'
+                                  : eq.telemetry.current.value >= eq.telemetry.current.warningThreshold
+                                  ? 'text-amber-400'
+                                  : 'text-slate-100'
+                                : eq.telemetry.temperature && eq.telemetry.temperature.value >= eq.telemetry.temperature.criticalThreshold
                                 ? 'text-rose-400'
-                                : eq.telemetry.temperature.value >= eq.telemetry.temperature.warningThreshold
+                                : eq.telemetry.temperature && eq.telemetry.temperature.value >= eq.telemetry.temperature.warningThreshold
                                 ? 'text-amber-400'
                                 : 'text-slate-100'
                             }`}
                           >
-                            {eq.telemetry.temperature.value}
+                            {eq.telemetry.current?.value ?? eq.telemetry.temperature?.value ?? 'N/A'}
                           </span>
-                          <span className="text-[10px] text-slate-400">{eq.telemetry.temperature.unit}</span>
+                          <span className="text-[10px] text-slate-400">
+                            {eq.telemetry.current?.unit ?? eq.telemetry.temperature?.unit ?? ''}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -374,21 +404,28 @@ export const OverviewTab: React.FC = () => {
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between space-x-2">
+                  <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between space-x-1.5">
                     <button
                       onClick={() => {
                         setSelectedEquipmentId(eq.id);
                         setActiveTab('health');
                       }}
-                      className="flex-1 py-1.5 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center transition shadow-sm"
+                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold text-center transition shadow-sm"
                     >
                       Health View
                     </button>
                     <button
-                      onClick={() => startTroubleshootForEquipment(eq.id)}
-                      className="flex-1 py-1.5 px-3 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/50 text-cyan-300 text-xs font-semibold text-center transition shadow-sm"
+                      onClick={() => openManualInputModal(eq)}
+                      title="Quick Manual Parameter Input"
+                      className="py-1.5 px-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-800/60 text-cyan-300 text-xs font-bold text-center transition shadow-sm"
                     >
-                      Troubleshoot
+                      + Param
+                    </button>
+                    <button
+                      onClick={() => startTroubleshootForEquipment(eq.id)}
+                      className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold text-center transition shadow-sm"
+                    >
+                      Diagnose
                     </button>
                     <button
                       onClick={() => openCreateWorkOrder({ equipmentId: eq.id, equipmentName: eq.name })}

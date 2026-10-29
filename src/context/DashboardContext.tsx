@@ -123,11 +123,11 @@ interface DashboardContextType {
 }
 
 const STORAGE_KEYS = {
-  EQUIPMENT: 'equipguard_equipment_v3',
+  EQUIPMENT: 'equipguard_equipment_v4',
   EQUIPMENT_REQUESTS: 'equipguard_equipment_requests_v3',
   RECORDS: 'equipguard_records_v3',
-  ALERTS: 'equipguard_alerts_v3',
-  PARAM_LOGS: 'equipguard_param_logs_v3',
+  ALERTS: 'equipguard_alerts_v4',
+  PARAM_LOGS: 'equipguard_param_logs_v4',
 };
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -137,12 +137,30 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [equipmentList, setEquipmentList] = useState<Equipment[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.EQUIPMENT);
+      const saved = localStorage.getItem(STORAGE_KEYS.EQUIPMENT) || localStorage.getItem('equipguard_equipment_v3');
       if (saved) {
         const parsed: Equipment[] = JSON.parse(saved);
-        const existingIds = new Set(parsed.map((e) => e.id));
+        const initialMap = new Map(INITIAL_EQUIPMENT.map((e) => [e.id, e]));
+        // Smart merge with INITIAL_EQUIPMENT to guarantee parameters, voltage, current, and physicalData are hydrated
+        const merged = parsed.map((item) => {
+          const initial = initialMap.get(item.id);
+          if (!initial) return item;
+          return {
+            ...initial,
+            ...item,
+            physicalData: item.physicalData || initial.physicalData,
+            parameters: item.parameters && item.parameters.length > 0 ? item.parameters : initial.parameters,
+            telemetry: {
+              ...initial.telemetry,
+              ...item.telemetry,
+              voltage: item.telemetry?.voltage || initial.telemetry?.voltage,
+              current: item.telemetry?.current || initial.telemetry?.current,
+            },
+          };
+        });
+        const existingIds = new Set(merged.map((e) => e.id));
         const missing = INITIAL_EQUIPMENT.filter((e) => !existingIds.has(e.id));
-        return [...parsed, ...missing];
+        return [...merged, ...missing];
       }
       return INITIAL_EQUIPMENT;
     } catch {
@@ -152,8 +170,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [parameterInputLogs, setParameterInputLogs] = useState<ParameterInputLog[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PARAM_LOGS);
-      return saved ? JSON.parse(saved) : INITIAL_PARAMETER_INPUT_LOGS;
+      const saved = localStorage.getItem(STORAGE_KEYS.PARAM_LOGS) || localStorage.getItem('equipguard_param_logs_v3');
+      if (saved) {
+        const parsed: ParameterInputLog[] = JSON.parse(saved);
+        const existingIds = new Set(parsed.map((l) => l.id));
+        const missing = INITIAL_PARAMETER_INPUT_LOGS.filter((l) => !existingIds.has(l.id));
+        return [...parsed, ...missing];
+      }
+      return INITIAL_PARAMETER_INPUT_LOGS;
     } catch {
       return INITIAL_PARAMETER_INPUT_LOGS;
     }
@@ -838,6 +862,21 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setParameterInputLogs((prev) => [newLog, ...prev]);
 
+    // Automatically trigger alert if parameter reading is Warning or Critical
+    if (params.status === 'critical' || params.status === 'warning') {
+      const newAlert: AlertItem = {
+        id: `ALT-PARAM-${Date.now().toString().slice(-4)}`,
+        equipmentId: targetEq.id,
+        equipmentName: targetEq.name,
+        severity: params.status,
+        code: params.status === 'critical' ? 'PARAM-CRIT' : 'PARAM-WARN',
+        message: `Manual Reading Alert: ${paramName} logged as ${params.status.toUpperCase()} (${params.value}) by ${employeeInfo.name} [${params.shift || 'General Shift'}]${params.notes ? ` — ${params.notes}` : ''}`,
+        timestamp: 'Just now',
+        acknowledged: false,
+      };
+      setAlerts((prev) => [newAlert, ...prev]);
+    }
+
     setEquipmentList((prev) =>
       prev.map((eq) => {
         if (eq.id !== params.equipmentId) return eq;
@@ -922,6 +961,27 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
 
     setParameterInputLogs((prev) => [...newLogs, ...prev]);
+
+    // Automatically trigger alerts for any parameters logged as Warning or Critical in the batch walk-down
+    const batchAlerts: AlertItem[] = updates
+      .filter((u) => u.status === 'critical' || u.status === 'warning')
+      .map((u, i) => {
+        const pObj = targetEq.parameters?.find((p) => p.id === u.parameterId);
+        return {
+          id: `ALT-BATCH-${Date.now().toString().slice(-4)}-${i}`,
+          equipmentId: targetEq.id,
+          equipmentName: targetEq.name,
+          severity: u.status,
+          code: u.status === 'critical' ? 'BATCH-CRIT' : 'BATCH-WARN',
+          message: `Shift Checklist Alert: ${pObj?.name || 'Parameter'} logged as ${u.status.toUpperCase()} (${u.value}) by ${employeeInfo.name} [${shift || 'General Shift'}]${u.notes ? ` — ${u.notes}` : ''}`,
+          timestamp: 'Just now',
+          acknowledged: false,
+        };
+      });
+
+    if (batchAlerts.length > 0) {
+      setAlerts((prev) => [...batchAlerts, ...prev]);
+    }
 
     const updateMap = new Map(updates.map((u, idx) => [u.parameterId, { ...u, log: newLogs[idx] }]));
 

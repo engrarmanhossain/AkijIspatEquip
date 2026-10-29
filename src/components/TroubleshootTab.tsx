@@ -49,7 +49,11 @@ export const TroubleshootTab: React.FC = () => {
   });
 
   const activeGuide = troubleshootingGuides.find((g) => g.id === selectedGuideId) || troubleshootingGuides[0];
-  const targetEquipment = equipmentList.find((e) => e.category === activeGuide.equipmentCategory) || equipmentList[0];
+  const targetEquipment =
+    equipmentList.find((e) => e.id === selectedEquipmentId && e.category === activeGuide.equipmentCategory) ||
+    equipmentList.find((e) => e.id === selectedEquipmentId) ||
+    equipmentList.find((e) => e.category === activeGuide.equipmentCategory) ||
+    equipmentList[0];
 
   const toggleStep = (stepNumber: number) => {
     setCompletedSteps((prev) => ({
