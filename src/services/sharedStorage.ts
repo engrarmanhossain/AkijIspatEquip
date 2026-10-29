@@ -19,11 +19,17 @@ export interface SharedStoreData {
   lastSyncedAt?: string;
 }
 
-const SYNC_ENDPOINTS = ['/api/sync', '/shared_data.json', './shared_data.json'];
+const SYNC_ENDPOINTS = [
+  '/api/sync',
+  './api/sync',
+  './shared_data.json',
+  '/shared_data.json',
+  'https://raw.githubusercontent.com/engrarmanhossain/AkijIspatEquip/main/public/shared_data.json',
+];
 
 /**
  * Fetches cross-browser persistent data from the backend / shared data store.
- * Works across different browsers (Chrome, Edge, Firefox, Safari, Incognito, Network devices).
+ * Works seamlessly across Chrome, Edge, Firefox, Safari, Mobile, Incognito, and GitHub Pages.
  */
 export async function fetchSharedData(): Promise<SharedStoreData | null> {
   for (const endpoint of SYNC_ENDPOINTS) {
@@ -42,7 +48,7 @@ export async function fetchSharedData(): Promise<SharedStoreData | null> {
         }
       }
     } catch {
-      // Continue to next endpoint fallback
+      // Continue to next fallback endpoint
     }
   }
   return null;
@@ -53,7 +59,8 @@ let pendingData: Partial<SharedStoreData> = {};
 
 /**
  * Persists data across all browsers by posting to the local backend server,
- * which writes directly to disk in public/shared_data.json.
+ * which writes directly to disk in public/shared_data.json and dist/shared_data.json,
+ * and automatically triggers an auto-push to GitHub origin/main.
  */
 export function saveSharedData(partial: Partial<SharedStoreData>) {
   pendingData = { ...pendingData, ...partial };
@@ -66,16 +73,22 @@ export function saveSharedData(partial: Partial<SharedStoreData>) {
     const payload = { ...pendingData };
     pendingData = {};
 
-    try {
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-    } catch (err) {
-      console.warn('Backend shared storage sync skipped (standalone/static mode):', err);
+    const targets = ['/api/sync', './api/sync'];
+    for (const target of targets) {
+      try {
+        const res = await fetch(target, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          break;
+        }
+      } catch (err) {
+        // Continue to fallback
+      }
     }
-  }, 250);
+  }, 200);
 }

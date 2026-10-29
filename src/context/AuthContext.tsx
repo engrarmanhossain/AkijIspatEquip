@@ -120,17 +120,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastSeenTimestamp = shared.lastSyncedAt;
         }
 
-        if (shared.companySettings) {
-          setCompanySettings((prev) => {
-            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.companySettings);
-            return hasChanged ? { ...prev, ...shared.companySettings } : prev;
+        // 1. Upstream reconciliation: If this browser has an avatar or custom branding that the shared store lacks, upload it!
+        const hasLocalAvatar = currentUser?.avatarUrl && currentUser.avatarUrl.length > 10;
+        const sharedHasAvatar = shared.employees?.some((e) => (e.id === currentUser?.id || e.email.toLowerCase() === currentUser?.email?.toLowerCase()) && e.avatarUrl);
+        const hasLocalLogo = companySettings.logoUrl && companySettings.logoUrl.length > 10;
+        const sharedHasLogo = shared.companySettings?.logoUrl && shared.companySettings.logoUrl.length > 10;
+
+        if ((hasLocalAvatar && !sharedHasAvatar) || (hasLocalLogo && !sharedHasLogo)) {
+          saveSharedData({
+            employees,
+            companySettings,
           });
         }
 
+        // 2. Company Settings Sync
+        if (shared.companySettings) {
+          setCompanySettings((prev) => {
+            const merged = { ...prev, ...shared.companySettings };
+            // Never overwrite existing valid logo with empty string from defaults
+            if (!shared.companySettings?.logoUrl && prev.logoUrl) {
+              merged.logoUrl = prev.logoUrl;
+            }
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(merged);
+            return hasChanged ? merged : prev;
+          });
+        }
+
+        // 3. Employees & Profile Pictures Sync
         if (shared.employees && Array.isArray(shared.employees) && shared.employees.length > 0) {
           setEmployees((prevList) => {
-            const hasChanged = JSON.stringify(prevList) !== JSON.stringify(shared.employees);
-            return hasChanged ? shared.employees! : prevList;
+            const sharedMap = new Map(shared.employees!.map((e) => [e.id, e]));
+            const mergedList = prevList.map((emp) => {
+              const sharedEmp = sharedMap.get(emp.id);
+              if (!sharedEmp) return emp;
+              return {
+                ...emp,
+                ...sharedEmp,
+                avatarUrl: sharedEmp.avatarUrl || emp.avatarUrl || '',
+              };
+            });
+
+            // Include any new employees from shared
+            const existingIds = new Set(prevList.map((e) => e.id));
+            const newShared = shared.employees!.filter((e) => !existingIds.has(e.id));
+            const finalList = [...mergedList, ...newShared];
+
+            const hasChanged = JSON.stringify(prevList) !== JSON.stringify(finalList);
+            return hasChanged ? finalList : prevList;
           });
 
           setCurrentUser((prevUser) => {
@@ -138,15 +174,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const updated = shared.employees!.find(
               (e) => e.id === prevUser.id || e.email.toLowerCase() === prevUser.email.toLowerCase()
             );
-            if (
-              updated &&
-              (updated.avatarUrl !== prevUser.avatarUrl ||
+            if (updated) {
+              const newAvatar = updated.avatarUrl || prevUser.avatarUrl || '';
+              if (
+                newAvatar !== prevUser.avatarUrl ||
                 updated.name !== prevUser.name ||
                 updated.department !== prevUser.department ||
                 updated.bio !== prevUser.bio ||
-                updated.phone !== prevUser.phone)
-            ) {
-              return { ...prevUser, ...updated };
+                updated.phone !== prevUser.phone
+              ) {
+                return { ...prevUser, ...updated, avatarUrl: newAvatar };
+              }
             }
             return prevUser;
           });
@@ -160,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     syncFromSharedStore();
 
     // Check shared store periodically so multiple open browsers automatically reflect changes
-    const interval = setInterval(syncFromSharedStore, 3000);
+    const interval = setInterval(syncFromSharedStore, 2500);
 
     // Cross-tab broadcast channel for immediate 0ms sync
     let channel: BroadcastChannel | null = null;
