@@ -173,19 +173,6 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
               </a>
             )}
 
-            {/* Quick Link: GitHub Remote Auto-Sync Repository */}
-            <a
-              href="https://github.com/engrarmanhossain/AkijIspatEquip"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="View GitHub Repository & Auto-Sync Commits (main branch)"
-              className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 text-xs text-slate-300 font-semibold transition whitespace-nowrap shrink-0 shadow-sm"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="hidden xl:inline">GitHub</span>
-              <ExternalLink className="w-2.5 h-2.5 text-slate-500 shrink-0" />
-            </a>
-
             {/* Approval Queue for Managers & Admin */}
             {(isManager || isAdmin) && (
               <button
