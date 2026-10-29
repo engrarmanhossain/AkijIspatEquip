@@ -366,6 +366,17 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           lastSeenTimestamp = shared.lastSyncedAt;
         }
 
+        // Upstream reconciliation: If this browser has active requests or modified equipment count that shared store lacks, upload it!
+        const hasLocalRequests = equipmentRequests && equipmentRequests.length > 0;
+        const sharedHasRequests = shared.equipmentRequests && shared.equipmentRequests.length > 0;
+        if (hasLocalRequests && !sharedHasRequests) {
+          saveSharedData({
+            equipmentList,
+            equipmentRequests,
+            maintenanceRecords,
+          });
+        }
+
         isRemoteSyncRef.current = true;
 
         if (shared.equipmentList && Array.isArray(shared.equipmentList) && shared.equipmentList.length > 0) {

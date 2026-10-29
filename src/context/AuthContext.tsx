@@ -120,9 +120,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastSeenTimestamp = shared.lastSyncedAt;
         }
 
-        // 1. Upstream reconciliation: If this browser has an avatar or custom branding that the shared store lacks, upload it!
-        const hasLocalAvatar = currentUser?.avatarUrl && currentUser.avatarUrl.length > 10;
-        const sharedHasAvatar = shared.employees?.some((e) => (e.id === currentUser?.id || e.email.toLowerCase() === currentUser?.email?.toLowerCase()) && e.avatarUrl);
+        // 1. Upstream reconciliation: If this browser has a custom avatar or company branding, persist it to cloud!
+        const hasLocalAvatar = currentUser?.avatarUrl && currentUser.avatarUrl.length > 30;
+        const sharedHasAvatar = shared.employees?.some(
+          (e) => (e.id === currentUser?.id || e.email.toLowerCase() === currentUser?.email?.toLowerCase()) && e.avatarUrl && e.avatarUrl.length > 30 && !e.avatarUrl.includes('#e11977')
+        );
         const hasLocalLogo = companySettings.logoUrl && companySettings.logoUrl.length > 10;
         const sharedHasLogo = shared.companySettings?.logoUrl && shared.companySettings.logoUrl.length > 10;
 
