@@ -22,6 +22,7 @@ import {
   ChevronUp,
   Zap,
 } from 'lucide-react';
+import { compressImageFile } from '../utils/imageCompressor';
 
 export const CompanySettingsModal: React.FC = () => {
   const {
@@ -79,18 +80,23 @@ export const CompanySettingsModal: React.FC = () => {
 
   if (!companySettingsModalOpen || !isAdmin) return null;
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setStatusMessage({ type: 'error', text: 'Logo image must be smaller than 2MB.' });
+      if (file.size > 5 * 1024 * 1024) {
+        setStatusMessage({ type: 'error', text: 'Logo image must be smaller than 5MB.' });
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImageFile(file, 512, 0.85);
+        setLogoUrl(compressed);
+      } catch {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 

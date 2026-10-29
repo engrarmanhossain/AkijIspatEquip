@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Employee, CompanySettings } from '../types';
 import { INITIAL_EMPLOYEES } from '../data/initialEmployees';
+import { fetchSharedData, saveSharedData } from '../services/sharedStorage';
 
 interface AuthContextType {
   currentUser: Employee | null;
@@ -57,7 +58,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [employees, setEmployees] = useState<Employee[]>(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEYS.EMPLOYEES);
-      return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
+      if (saved) {
+        const parsed: Employee[] = JSON.parse(saved);
+        const parsedMap = new Map(parsed.map((e) => [e.id, e]));
+        const merged = INITIAL_EMPLOYEES.map((init) => {
+          const match = parsedMap.get(init.id);
+          return match ? { ...init, ...match } : init;
+        });
+        const extra = parsed.filter((p) => !INITIAL_EMPLOYEES.some((init) => init.id === p.id));
+        return [...merged, ...extra];
+      }
+      return INITIAL_EMPLOYEES;
     } catch {
       return INITIAL_EMPLOYEES;
     }
@@ -66,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [companySettings, setCompanySettings] = useState<CompanySettings>(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEYS.COMPANY_SETTINGS);
-      return saved ? JSON.parse(saved) : DEFAULT_COMPANY_SETTINGS;
+      return saved ? { ...DEFAULT_COMPANY_SETTINGS, ...JSON.parse(saved) } : DEFAULT_COMPANY_SETTINGS;
     } catch {
       return DEFAULT_COMPANY_SETTINGS;
     }
@@ -75,12 +86,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<Employee | null>(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEYS.CURRENT_USER);
-      if (!saved) return null;
+      if (!saved) return INITIAL_EMPLOYEES[0];
       const parsed = JSON.parse(saved);
-      const found = INITIAL_EMPLOYEES.find((e) => e.email.toLowerCase() === parsed.email?.toLowerCase());
-      return found || parsed;
+      const found = INITIAL_EMPLOYEES.find(
+        (e) => e.email?.toLowerCase() === parsed.email?.toLowerCase() || e.id === parsed.id
+      );
+      // Merge so that user modifications like avatarUrl, phone, bio are NEVER lost to default INITIAL_EMPLOYEES
+      return { ...(found || {}), ...parsed };
     } catch {
-      return null;
+      return INITIAL_EMPLOYEES[0];
     }
   });
 
@@ -88,6 +102,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [editEmployeeModalOpen, setEditEmployeeModalOpen] = useState(false);
   const [companySettingsModalOpen, setCompanySettingsModalOpen] = useState(false);
   const [targetEmployeeForEdit, setTargetEmployeeForEdit] = useState<Employee | null>(null);
+
+  // Cross-browser synchronization via fetchSharedData & BroadcastChannel
+  useEffect(() => {
+    let isMounted = true;
+    let lastSeenTimestamp = '';
+
+    const syncFromSharedStore = async () => {
+      try {
+        const shared = await fetchSharedData();
+        if (!shared || !isMounted) return;
+
+        if (shared.lastSyncedAt && shared.lastSyncedAt === lastSeenTimestamp) {
+          return;
+        }
+        if (shared.lastSyncedAt) {
+          lastSeenTimestamp = shared.lastSyncedAt;
+        }
+
+        if (shared.companySettings) {
+          setCompanySettings((prev) => {
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.companySettings);
+            return hasChanged ? { ...prev, ...shared.companySettings } : prev;
+          });
+        }
+
+        if (shared.employees && Array.isArray(shared.employees) && shared.employees.length > 0) {
+          setEmployees((prevList) => {
+            const hasChanged = JSON.stringify(prevList) !== JSON.stringify(shared.employees);
+            return hasChanged ? shared.employees! : prevList;
+          });
+
+          setCurrentUser((prevUser) => {
+            if (!prevUser) return prevUser;
+            const updated = shared.employees!.find(
+              (e) => e.id === prevUser.id || e.email.toLowerCase() === prevUser.email.toLowerCase()
+            );
+            if (
+              updated &&
+              (updated.avatarUrl !== prevUser.avatarUrl ||
+                updated.name !== prevUser.name ||
+                updated.department !== prevUser.department ||
+                updated.bio !== prevUser.bio ||
+                updated.phone !== prevUser.phone)
+            ) {
+              return { ...prevUser, ...updated };
+            }
+            return prevUser;
+          });
+        }
+      } catch (err) {
+        console.warn('Cross-browser auth sync check:', err);
+      }
+    };
+
+    // Immediate initial sync
+    syncFromSharedStore();
+
+    // Check shared store periodically so multiple open browsers automatically reflect changes
+    const interval = setInterval(syncFromSharedStore, 3000);
+
+    // Cross-tab broadcast channel for immediate 0ms sync
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('equipguard_auth_sync');
+        channel.onmessage = (event) => {
+          if (!event.data) return;
+          const { type, companySettings: syncedSettings, employees: syncedEmployees } = event.data;
+          if (type === 'AUTH_SYNC') {
+            if (syncedSettings) setCompanySettings(syncedSettings);
+            if (syncedEmployees) {
+              setEmployees(syncedEmployees);
+              setCurrentUser((prev) => {
+                if (!prev) return prev;
+                const match = syncedEmployees.find((e: Employee) => e.id === prev.id);
+                return match ? { ...prev, ...match } : prev;
+              });
+            }
+          }
+        };
+      }
+    } catch {}
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      channel?.close();
+    };
+  }, []);
 
   // Sync to LocalStorage
   useEffect(() => {
@@ -158,10 +261,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Unauthorized: Only System Administrator can modify Company Name and Logo.' };
     }
 
-    setCompanySettings((prev) => ({
-      ...prev,
+    const updated = {
+      ...companySettings,
       ...settings,
-    }));
+    };
+
+    setCompanySettings(updated);
+
+    // Persist to shared storage for ALL browsers
+    saveSharedData({ companySettings: updated });
+
+    // Broadcast immediately to open tabs
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('equipguard_auth_sync');
+        bc.postMessage({ type: 'AUTH_SYNC', companySettings: updated });
+        bc.close();
+      }
+    } catch {}
 
     return { success: true };
   };
@@ -197,7 +314,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
     };
 
-    setEmployees((prev) => [newEmployee, ...prev]);
+    const newEmployees = [newEmployee, ...employees];
+    setEmployees(newEmployees);
+    saveSharedData({ employees: newEmployees });
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('equipguard_auth_sync');
+        bc.postMessage({ type: 'AUTH_SYNC', employees: newEmployees });
+        bc.close();
+      }
+    } catch {}
+
     return { success: true };
   };
 
@@ -215,20 +343,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id !== id) return emp;
-        const updated = {
-          ...emp,
-          ...data,
-          email: data.email ? data.email.trim().toLowerCase() : emp.email,
-        };
-        if (currentUser && currentUser.id === id) {
-          setCurrentUser(updated);
-        }
-        return updated;
-      })
-    );
+    const updatedEmployees = employees.map((emp) => {
+      if (emp.id !== id) return emp;
+      const updated = {
+        ...emp,
+        ...data,
+        email: data.email ? data.email.trim().toLowerCase() : emp.email,
+      };
+      if (currentUser && currentUser.id === id) {
+        setCurrentUser(updated);
+      }
+      return updated;
+    });
+
+    setEmployees(updatedEmployees);
+    saveSharedData({ employees: updatedEmployees });
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('equipguard_auth_sync');
+        bc.postMessage({ type: 'AUTH_SYNC', employees: updatedEmployees });
+        bc.close();
+      }
+    } catch {}
 
     return { success: true };
   };
@@ -256,14 +393,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.designation) sanitizedData.designation = data.designation;
     }
 
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id !== id) return emp;
-        const updated = { ...emp, ...sanitizedData };
-        setCurrentUser(updated);
-        return updated;
-      })
-    );
+    const updatedEmployees = employees.map((emp) => {
+      if (emp.id !== id) return emp;
+      return { ...emp, ...sanitizedData };
+    });
+
+    setEmployees(updatedEmployees);
+    const updatedUser = updatedEmployees.find((e) => e.id === id);
+    if (updatedUser) {
+      setCurrentUser(updatedUser);
+    }
+
+    // Persist to shared storage for ALL browsers
+    saveSharedData({ employees: updatedEmployees });
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('equipguard_auth_sync');
+        bc.postMessage({ type: 'AUTH_SYNC', employees: updatedEmployees });
+        bc.close();
+      }
+    } catch {}
 
     return { success: true };
   };
@@ -281,7 +431,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Cannot delete the primary System Administrator profile.' };
     }
 
-    setEmployees((prev) => prev.filter((e) => e.id !== id));
+    const updatedEmployees = employees.filter((e) => e.id !== id);
+    setEmployees(updatedEmployees);
+    saveSharedData({ employees: updatedEmployees });
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('equipguard_auth_sync');
+        bc.postMessage({ type: 'AUTH_SYNC', employees: updatedEmployees });
+        bc.close();
+      }
+    } catch {}
+
     return { success: true };
   };
 
@@ -305,6 +466,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCompanySettings(DEFAULT_COMPANY_SETTINGS);
     localStorage.removeItem(AUTH_STORAGE_KEYS.EMPLOYEES);
     localStorage.removeItem(AUTH_STORAGE_KEYS.COMPANY_SETTINGS);
+    saveSharedData({ employees: INITIAL_EMPLOYEES, companySettings: DEFAULT_COMPANY_SETTINGS });
   };
 
   return (

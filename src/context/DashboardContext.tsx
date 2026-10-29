@@ -25,6 +25,7 @@ import {
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
 import { calculateEquipmentHealth, synchronizeTelemetryFromParameters } from '../utils/healthCalculator';
+import { fetchSharedData, saveSharedData } from '../services/sharedStorage';
 
 interface DashboardContextType {
   equipmentList: Equipment[];
@@ -277,6 +278,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, []);
 
+  const isRemoteSyncRef = useRef(false);
+
   const broadcastUpdate = (type: string, data: any) => {
     try {
       broadcastRef.current?.postMessage({ type, data });
@@ -285,11 +288,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Sync to LocalStorage & Broadcast across open tabs/windows
+  // Sync to LocalStorage, Shared Disk Storage & Broadcast across open tabs/windows
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.EQUIPMENT, JSON.stringify(equipmentList));
       broadcastUpdate('EQUIPMENT_SYNC', equipmentList);
+      if (!isRemoteSyncRef.current) {
+        saveSharedData({ equipmentList });
+      }
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -299,6 +305,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       localStorage.setItem(STORAGE_KEYS.PARAM_LOGS, JSON.stringify(parameterInputLogs));
       broadcastUpdate('LOGS_SYNC', parameterInputLogs);
+      if (!isRemoteSyncRef.current) {
+        saveSharedData({ parameterInputLogs });
+      }
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -308,6 +317,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       localStorage.setItem(STORAGE_KEYS.EQUIPMENT_REQUESTS, JSON.stringify(equipmentRequests));
       broadcastUpdate('REQUESTS_SYNC', equipmentRequests);
+      if (!isRemoteSyncRef.current) {
+        saveSharedData({ equipmentRequests });
+      }
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -317,6 +329,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(maintenanceRecords));
       broadcastUpdate('RECORDS_SYNC', maintenanceRecords);
+      if (!isRemoteSyncRef.current) {
+        saveSharedData({ maintenanceRecords });
+      }
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -326,10 +341,77 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       localStorage.setItem(STORAGE_KEYS.ALERTS, JSON.stringify(alerts));
       broadcastUpdate('ALERTS_SYNC', alerts);
+      if (!isRemoteSyncRef.current) {
+        saveSharedData({ alerts });
+      }
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
   }, [alerts]);
+
+  // Periodic cross-browser shared sync from server disk
+  useEffect(() => {
+    let isMounted = true;
+    let lastSeenTimestamp = '';
+
+    const syncFleetFromSharedStore = async () => {
+      try {
+        const shared = await fetchSharedData();
+        if (!shared || !isMounted) return;
+
+        if (shared.lastSyncedAt && shared.lastSyncedAt === lastSeenTimestamp) {
+          return;
+        }
+        if (shared.lastSyncedAt) {
+          lastSeenTimestamp = shared.lastSyncedAt;
+        }
+
+        isRemoteSyncRef.current = true;
+
+        if (shared.equipmentList && Array.isArray(shared.equipmentList) && shared.equipmentList.length > 0) {
+          setEquipmentList((prev) => {
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.equipmentList);
+            return hasChanged ? shared.equipmentList! : prev;
+          });
+        }
+
+        if (shared.parameterInputLogs && Array.isArray(shared.parameterInputLogs) && shared.parameterInputLogs.length > 0) {
+          setParameterInputLogs((prev) => {
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.parameterInputLogs);
+            return hasChanged ? shared.parameterInputLogs! : prev;
+          });
+        }
+
+        if (shared.maintenanceRecords && Array.isArray(shared.maintenanceRecords) && shared.maintenanceRecords.length > 0) {
+          setMaintenanceRecords((prev) => {
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.maintenanceRecords);
+            return hasChanged ? shared.maintenanceRecords! : prev;
+          });
+        }
+
+        if (shared.equipmentRequests && Array.isArray(shared.equipmentRequests)) {
+          setEquipmentRequests((prev) => {
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.equipmentRequests);
+            return hasChanged ? shared.equipmentRequests! : prev;
+          });
+        }
+
+        setTimeout(() => {
+          isRemoteSyncRef.current = false;
+        }, 150);
+      } catch (err) {
+        console.warn('Cross-browser fleet sync error:', err);
+      }
+    };
+
+    syncFleetFromSharedStore();
+    const interval = setInterval(syncFleetFromSharedStore, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Listen for broadcasts and storage changes from other tabs/employees in real time
   useEffect(() => {

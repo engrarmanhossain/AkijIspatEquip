@@ -17,6 +17,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { Employee } from '../types';
+import { compressImageFile } from '../utils/imageCompressor';
 
 export const MyProfileModal: React.FC = () => {
   const {
@@ -55,18 +56,23 @@ export const MyProfileModal: React.FC = () => {
 
   if (!myProfileModalOpen || !currentUser) return null;
 
-  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setStatusMessage({ type: 'error', text: 'Profile photo must be under 2MB.' });
+      if (file.size > 5 * 1024 * 1024) {
+        setStatusMessage({ type: 'error', text: 'Profile photo must be under 5MB.' });
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImageFile(file, 480, 0.85);
+        setAvatarUrl(compressed);
+      } catch {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAvatarUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
