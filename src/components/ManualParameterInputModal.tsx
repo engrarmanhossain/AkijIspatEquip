@@ -70,12 +70,9 @@ export const ManualParameterInputModal: React.FC = () => {
     setSuccessToast(null);
   }, [equipment, initialParameter, manualInputModalOpen]);
 
-  if (!manualInputModalOpen || !equipment) return null;
-
-  const currentParamObj = (equipment.parameters || []).find((p) => p.id === selectedParamId);
-
+  // Hook MUST be called unconditionally before any early returns
   const simulatedAssessment = useMemo(() => {
-    if (!equipment?.parameters) return null;
+    if (!manualInputModalOpen || !equipment?.parameters) return null;
     if (mode === 'single') {
       const simulated = equipment.parameters.map((p) => {
         if (p.id !== selectedParamId) return p;
@@ -98,7 +95,11 @@ export const ManualParameterInputModal: React.FC = () => {
       });
       return calculateEquipmentHealth(simulated);
     }
-  }, [equipment?.parameters, mode, selectedParamId, measuredValue, status, batchData]);
+  }, [manualInputModalOpen, equipment?.parameters, mode, selectedParamId, measuredValue, status, batchData]);
+
+  if (!manualInputModalOpen || !equipment) return null;
+
+  const currentParamObj = (equipment.parameters || []).find((p) => p.id === selectedParamId);
 
   const handleSelectParam = (paramId: string) => {
     setSelectedParamId(paramId);

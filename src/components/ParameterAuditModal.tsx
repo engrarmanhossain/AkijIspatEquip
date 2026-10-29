@@ -44,19 +44,19 @@ export const ParameterAuditModal: React.FC = () => {
     }
   }, [auditEquipmentId, auditModalOpen]);
 
-  if (!auditModalOpen) return null;
-
-  // Unique list of employees who have submitted logs
+  // Unique list of employees who have submitted logs (Called unconditionally before any early returns)
   const employeeOptions = useMemo(() => {
+    if (!auditModalOpen) return ['All'];
     const names = new Set<string>();
     parameterInputLogs.forEach((log) => {
       if (log.inputBy?.name) names.add(log.inputBy.name);
     });
     return ['All', ...Array.from(names)];
-  }, [parameterInputLogs]);
+  }, [auditModalOpen, parameterInputLogs]);
 
-  // Filtered logs
+  // Filtered logs (Called unconditionally before any early returns)
   const filteredLogs = useMemo(() => {
+    if (!auditModalOpen) return [];
     return parameterInputLogs.filter((log) => {
       // Equipment filter
       if (equipmentFilter !== 'All' && log.equipmentId !== equipmentFilter) return false;
@@ -85,7 +85,9 @@ export const ParameterAuditModal: React.FC = () => {
 
       return true;
     });
-  }, [parameterInputLogs, equipmentFilter, auditParameterId, employeeFilter, statusFilter, searchQuery]);
+  }, [auditModalOpen, parameterInputLogs, equipmentFilter, auditParameterId, employeeFilter, statusFilter, searchQuery]);
+
+  if (!auditModalOpen) return null;
 
   const handleExportAuditCSV = () => {
     const headers = [

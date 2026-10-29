@@ -74,8 +74,6 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [paramPriorityFilter, setParamPriorityFilter] = useState<'All' | 'High Priority' | 'Less Priority'>('All');
 
-  if (!selectedEquipment) return null;
-
   const categories = [
     'All',
     'VFD',
@@ -95,9 +93,10 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
     ? equipmentList 
     : equipmentList.filter((e) => e.category === filterCategory);
 
+  // Hook calls must be unconditional before any early returns
   const assessment = useMemo(() => {
-    return calculateEquipmentHealth(selectedEquipment.parameters);
-  }, [selectedEquipment.parameters]);
+    return calculateEquipmentHealth(selectedEquipment?.parameters);
+  }, [selectedEquipment?.parameters]);
 
   const availableSensors = useMemo(() => {
     if (!selectedEquipment) return [];
@@ -110,7 +109,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
       sensor: SensorParameter;
     }[] = [];
 
-    if (selectedEquipment.telemetry.voltage) {
+    if (selectedEquipment.telemetry?.voltage) {
       list.push({
         key: 'voltage',
         label: 'Voltage',
@@ -121,7 +120,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
       });
     }
 
-    if (selectedEquipment.telemetry.current) {
+    if (selectedEquipment.telemetry?.current) {
       list.push({
         key: 'current',
         label: 'Current',
@@ -132,7 +131,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
       });
     }
 
-    if (selectedEquipment.telemetry.temperature) {
+    if (selectedEquipment.telemetry?.temperature) {
       list.push({
         key: 'temperature',
         label: 'Temperature',
@@ -143,7 +142,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
       });
     }
 
-    if (selectedEquipment.telemetry.vibration) {
+    if (selectedEquipment.telemetry?.vibration) {
       list.push({
         key: 'vibration',
         label: 'Vibration',
@@ -154,7 +153,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
       });
     }
 
-    if (selectedEquipment.telemetry.pressure) {
+    if (selectedEquipment.telemetry?.pressure) {
       list.push({
         key: 'pressure',
         label: 'Pressure',
@@ -165,7 +164,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
       });
     }
 
-    if (selectedEquipment.telemetry.motorLoad && !selectedEquipment.telemetry.current) {
+    if (selectedEquipment.telemetry?.motorLoad && !selectedEquipment.telemetry?.current) {
       list.push({
         key: 'motorLoad',
         label: 'Motor Load',
@@ -182,6 +181,14 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
   const activeSensorObj = useMemo(() => {
     return availableSensors.find((s) => s.key === activeSensorKey) || availableSensors[0];
   }, [availableSensors, activeSensorKey]);
+
+  if (!selectedEquipment) {
+    return (
+      <div className="p-8 text-center bg-slate-900/60 border border-slate-800 rounded-2xl">
+        <p className="text-slate-400">No equipment selected. Please select an equipment from the fleet overview.</p>
+      </div>
+    );
+  }
 
   const currentSensor: SensorParameter | undefined = activeSensorObj?.sensor;
 
