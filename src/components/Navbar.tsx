@@ -9,8 +9,6 @@ import {
   BarChart3,
   Flame,
   PlusCircle,
-  Play,
-  Pause,
   Clock,
   RotateCcw,
   Users,
@@ -30,8 +28,6 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
   const {
     activeTab,
     setActiveTab,
-    isSimulating,
-    toggleSimulation,
     stats,
     equipmentRequests,
     openCreateWorkOrder,
@@ -189,30 +185,6 @@ export const Navbar: React.FC<{ onOpenFaultModal: () => void }> = ({ onOpenFault
                 )}
               </button>
             )}
-
-            {/* Simulation Status Pill */}
-            <button
-              onClick={toggleSimulation}
-              title={isSimulating ? 'Pause telemetry stream simulation' : 'Start live telemetry stream simulation'}
-              className={`hidden md:flex items-center space-x-2 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all whitespace-nowrap shrink-0 ${
-                isSimulating
-                  ? 'bg-emerald-950/40 border-emerald-700/50 text-emerald-300 hover:bg-emerald-900/40'
-                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:bg-slate-800'
-              }`}
-            >
-              <span className="relative flex h-2 w-2">
-                {isSimulating && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                )}
-                <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    isSimulating ? 'bg-emerald-500' : 'bg-slate-500'
-                  }`}
-                ></span>
-              </span>
-              <span>{isSimulating ? 'Live' : 'Paused'}</span>
-              {isSimulating ? <Pause className="w-3 h-3 ml-0.5" /> : <Play className="w-3 h-3 ml-0.5" />}
-            </button>
 
             {/* Fault Simulator Trigger */}
             <button

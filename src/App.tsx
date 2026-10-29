@@ -70,7 +70,7 @@ const DashboardContent: React.FC = () => {
               <Shield className="w-3.5 h-3.5 mr-1 text-cyan-400" /> ISO 55001 Asset Management
             </span>
             <span className="flex items-center">
-              <Activity className="w-3.5 h-3.5 mr-1 text-emerald-400" /> Telemetry Frequency: 2.8s
+              <Activity className="w-3.5 h-3.5 mr-1 text-emerald-400" /> Manual Inspection & Parameter Logging: Active
             </span>
           </div>
         </div>

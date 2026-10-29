@@ -36,7 +36,6 @@ interface DashboardContextType {
   selectedEquipment: Equipment | undefined;
   activeTab: 'overview' | 'health' | 'troubleshoot' | 'register' | 'analytics' | 'employees';
   searchQuery: string;
-  isSimulating: boolean;
   activeDiagnosticFaultCode: string | null;
   activeWorkOrderModal: boolean;
   editingWorkOrder: MaintenanceRecord | null;
@@ -50,7 +49,6 @@ interface DashboardContextType {
   setActiveTab: (tab: 'overview' | 'health' | 'troubleshoot' | 'register' | 'analytics' | 'employees') => void;
   setSelectedEquipmentId: (id: string) => void;
   setSearchQuery: (query: string) => void;
-  toggleSimulation: () => void;
   acknowledgeAlert: (alertId: string) => void;
   clearAlert: (alertId: string) => void;
   injectFault: (equipmentId: string, faultType: 'bearing_vibration' | 'thermal_runaway' | 'pressure_drop' | 'motor_overload') => void;
@@ -144,27 +142,58 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // Smart merge with INITIAL_EQUIPMENT to guarantee parameters, voltage, current, and physicalData are hydrated
         const merged = parsed.map((item) => {
           const initial = initialMap.get(item.id);
-          if (!initial) return item;
+          const raw = initial
+            ? {
+                ...initial,
+                ...item,
+                physicalData: item.physicalData || initial.physicalData,
+                parameters: item.parameters && item.parameters.length > 0 ? item.parameters : initial.parameters,
+                telemetry: {
+                  ...initial.telemetry,
+                  ...item.telemetry,
+                  voltage: item.telemetry?.voltage || initial.telemetry?.voltage,
+                  current: item.telemetry?.current || initial.telemetry?.current,
+                },
+              }
+            : item;
+
+          // Equipment health score & status strictly derived from manual parameter update data!
+          const assessment = calculateEquipmentHealth(raw.parameters);
+          const status = raw.status === 'maintenance' || raw.status === 'offline' ? raw.status : assessment.status;
           return {
-            ...initial,
-            ...item,
-            physicalData: item.physicalData || initial.physicalData,
-            parameters: item.parameters && item.parameters.length > 0 ? item.parameters : initial.parameters,
-            telemetry: {
-              ...initial.telemetry,
-              ...item.telemetry,
-              voltage: item.telemetry?.voltage || initial.telemetry?.voltage,
-              current: item.telemetry?.current || initial.telemetry?.current,
-            },
+            ...raw,
+            healthScore: assessment.healthScore,
+            status,
           };
         });
         const existingIds = new Set(merged.map((e) => e.id));
-        const missing = INITIAL_EQUIPMENT.filter((e) => !existingIds.has(e.id));
+        const missing = INITIAL_EQUIPMENT.filter((e) => !existingIds.has(e.id)).map((eq) => {
+          const assessment = calculateEquipmentHealth(eq.parameters);
+          return {
+            ...eq,
+            healthScore: assessment.healthScore,
+            status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
+          };
+        });
         return [...merged, ...missing];
       }
-      return INITIAL_EQUIPMENT;
+      return INITIAL_EQUIPMENT.map((eq) => {
+        const assessment = calculateEquipmentHealth(eq.parameters);
+        return {
+          ...eq,
+          healthScore: assessment.healthScore,
+          status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
+        };
+      });
     } catch {
-      return INITIAL_EQUIPMENT;
+      return INITIAL_EQUIPMENT.map((eq) => {
+        const assessment = calculateEquipmentHealth(eq.parameters);
+        return {
+          ...eq,
+          healthScore: assessment.healthScore,
+          status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
+        };
+      });
     }
   });
 
@@ -214,7 +243,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>(INITIAL_EQUIPMENT[0].id);
   const [activeTab, setActiveTab] = useState<'overview' | 'health' | 'troubleshoot' | 'register' | 'analytics' | 'employees'>('overview');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [activeDiagnosticFaultCode, setActiveDiagnosticFaultCode] = useState<string | null>(null);
 
   // Modal states
@@ -398,85 +426,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       activeAlertsCount,
     };
   }, [equipmentList, maintenanceRecords, alerts]);
-
-  // Telemetry Simulation Loop (Subtle live telemetry fluctuations; health status remains anchored to manual parameter entries)
-  useEffect(() => {
-    if (!isSimulating) return;
-
-    const interval = setInterval(() => {
-      const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-      setEquipmentList((prevList) =>
-        prevList.map((eq) => {
-          if (eq.status === 'maintenance' || eq.status === 'offline') {
-            return eq;
-          }
-
-          const updatedTelemetry: EquipmentTelemetry = { ...eq.telemetry };
-
-          if (updatedTelemetry.voltage) {
-            const volt = updatedTelemetry.voltage;
-            const delta = (Math.random() - 0.5) * (volt.max * 0.005);
-            const newVal = Math.max(volt.min, Math.min(volt.max, Number((volt.value + delta).toFixed(1))));
-            const newHistory = [...(volt.history || []).slice(1), { timestamp: nowTime, val: newVal }];
-            updatedTelemetry.voltage = { ...volt, value: newVal, history: newHistory };
-          }
-
-          if (updatedTelemetry.current) {
-            const curr = updatedTelemetry.current;
-            const delta = (Math.random() - 0.5) * (curr.max * 0.008);
-            const newVal = Math.max(curr.min, Math.min(curr.max, Number((curr.value + delta).toFixed(1))));
-            const newHistory = [...(curr.history || []).slice(1), { timestamp: nowTime, val: newVal }];
-            updatedTelemetry.current = { ...curr, value: newVal, history: newHistory };
-          }
-
-          if (updatedTelemetry.vibration) {
-            const vib = updatedTelemetry.vibration;
-            const delta = (Math.random() - 0.48) * 0.12;
-            const newVal = Math.max(0.1, Number((vib.value + delta).toFixed(2)));
-            const newHistory = [...(vib.history || []).slice(1), { timestamp: nowTime, val: newVal }];
-            updatedTelemetry.vibration = { ...vib, value: newVal, history: newHistory };
-          }
-
-          if (updatedTelemetry.temperature) {
-            const temp = updatedTelemetry.temperature;
-            const delta = (Math.random() - 0.48) * 0.3;
-            const newVal = Math.max(20, Number((temp.value + delta).toFixed(1)));
-            const newHistory = [...(temp.history || []).slice(1), { timestamp: nowTime, val: newVal }];
-            updatedTelemetry.temperature = { ...temp, value: newVal, history: newHistory };
-          }
-
-          if (updatedTelemetry.pressure) {
-            const press = updatedTelemetry.pressure;
-            const delta = (Math.random() - 0.5) * 0.05;
-            const newVal = Math.max(0, Number((press.value + delta).toFixed(2)));
-            const newHistory = [...(press.history || []).slice(1), { timestamp: nowTime, val: newVal }];
-            updatedTelemetry.pressure = { ...press, value: newVal, history: newHistory };
-          }
-
-          if (updatedTelemetry.motorLoad) {
-            const load = updatedTelemetry.motorLoad;
-            const delta = (Math.random() - 0.5) * 1.5;
-            const newVal = Math.max(0, Math.min(load.max, Number((load.value + delta).toFixed(1))));
-            const newHistory = [...(load.history || []).slice(1), { timestamp: nowTime, val: newVal }];
-            updatedTelemetry.motorLoad = { ...load, value: newVal, history: newHistory };
-          }
-
-          // Equipment Health Status is strictly anchored to manual parameter entries
-          const assessment = calculateEquipmentHealth(eq.parameters);
-
-          return {
-            ...eq,
-            healthScore: assessment.healthScore,
-            status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
-            telemetry: updatedTelemetry,
-          };
-        })
-      );
-    }, 2800);
-
-    return () => clearInterval(interval);
-  }, [isSimulating]);
 
   // Alert management
   const acknowledgeAlert = (alertId: string) => {
@@ -1260,7 +1209,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         selectedEquipment,
         activeTab,
         searchQuery,
-        isSimulating,
         activeDiagnosticFaultCode,
         activeWorkOrderModal,
         editingWorkOrder,
@@ -1272,7 +1220,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setActiveTab,
         setSelectedEquipmentId,
         setSearchQuery,
-        toggleSimulation: () => setIsSimulating((prev) => !prev),
         acknowledgeAlert,
         clearAlert,
         injectFault,
