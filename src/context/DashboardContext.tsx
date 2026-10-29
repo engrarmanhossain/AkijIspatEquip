@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import type {
   Equipment,
   MaintenanceRecord,
@@ -234,10 +234,34 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [auditEquipmentId, setAuditEquipmentId] = useState<string | null>(null);
   const [auditParameterId, setAuditParameterId] = useState<string | null>(null);
 
-  // Sync to LocalStorage
+  // Cross-tab Real-time Broadcast Channel
+  const broadcastRef = useRef<BroadcastChannel | null>(null);
+  useEffect(() => {
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        broadcastRef.current = new BroadcastChannel('equipguard_realtime_sync');
+      } catch (err) {
+        console.warn('BroadcastChannel initialization skipped', err);
+      }
+    }
+    return () => {
+      broadcastRef.current?.close();
+    };
+  }, []);
+
+  const broadcastUpdate = (type: string, data: any) => {
+    try {
+      broadcastRef.current?.postMessage({ type, data });
+    } catch {
+      // Fallback
+    }
+  };
+
+  // Sync to LocalStorage & Broadcast across open tabs/windows
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.EQUIPMENT, JSON.stringify(equipmentList));
+      broadcastUpdate('EQUIPMENT_SYNC', equipmentList);
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -246,6 +270,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.PARAM_LOGS, JSON.stringify(parameterInputLogs));
+      broadcastUpdate('LOGS_SYNC', parameterInputLogs);
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -254,6 +279,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.EQUIPMENT_REQUESTS, JSON.stringify(equipmentRequests));
+      broadcastUpdate('REQUESTS_SYNC', equipmentRequests);
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -262,6 +288,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(maintenanceRecords));
+      broadcastUpdate('RECORDS_SYNC', maintenanceRecords);
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
@@ -270,10 +297,64 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.ALERTS, JSON.stringify(alerts));
+      broadcastUpdate('ALERTS_SYNC', alerts);
     } catch (e) {
       console.warn('LocalStorage save failed', e);
     }
   }, [alerts]);
+
+  // Listen for broadcasts and storage changes from other tabs/employees in real time
+  useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        channel = new BroadcastChannel('equipguard_realtime_sync');
+        channel.onmessage = (event) => {
+          if (!event.data) return;
+          const { type, data } = event.data;
+          if (type === 'EQUIPMENT_SYNC' && Array.isArray(data)) {
+            setEquipmentList(data);
+          } else if (type === 'LOGS_SYNC' && Array.isArray(data)) {
+            setParameterInputLogs(data);
+          } else if (type === 'REQUESTS_SYNC' && Array.isArray(data)) {
+            setEquipmentRequests(data);
+          } else if (type === 'RECORDS_SYNC' && Array.isArray(data)) {
+            setMaintenanceRecords(data);
+          } else if (type === 'ALERTS_SYNC' && Array.isArray(data)) {
+            setAlerts(data);
+          }
+        };
+      } catch (err) {
+        console.warn('Broadcast listener skipped', err);
+      }
+    }
+
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (!e.key || !e.newValue) return;
+      try {
+        if (e.key === STORAGE_KEYS.EQUIPMENT) {
+          setEquipmentList(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.PARAM_LOGS) {
+          setParameterInputLogs(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.EQUIPMENT_REQUESTS) {
+          setEquipmentRequests(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.RECORDS) {
+          setMaintenanceRecords(JSON.parse(e.newValue));
+        } else if (e.key === STORAGE_KEYS.ALERTS) {
+          setAlerts(JSON.parse(e.newValue));
+        }
+      } catch (err) {
+        console.warn('Cross-session storage sync error:', err);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageEvent);
+      channel?.close();
+    };
+  }, []);
 
   const selectedEquipment = useMemo(() => {
     return equipmentList.find((eq) => eq.id === selectedEquipmentId) || equipmentList[0];
@@ -1034,6 +1115,43 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         success: false,
         error: 'Unauthorized: Only Management Employees (Directors, Managers, and Supervisors) can edit physical equipment data and calibrate standard benchmark specifications.',
       };
+    }
+
+    const targetEq = equipmentList.find((e) => e.id === equipmentId);
+    if (targetEq) {
+      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 16);
+      const employeeInfo = currentUser
+        ? {
+            id: currentUser.id,
+            employeeId: currentUser.employeeId,
+            name: currentUser.name,
+            role: currentUser.role,
+            designation: currentUser.designation,
+            avatarUrl: currentUser.avatarUrl,
+          }
+        : {
+            id: 'EMP-MGT',
+            employeeId: 'MGT-001',
+            name: 'Plant Manager',
+            role: 'manager' as const,
+            designation: 'Reliability Manager',
+          };
+
+      const mgmtLog: ParameterInputLog = {
+        id: `LOG-MGMT-${Date.now().toString().slice(-6)}`,
+        parameterId: 'PHYSICAL-STANDARD-CALIBRATION',
+        parameterName: 'Physical Specs & Standards',
+        equipmentId: targetEq.id,
+        equipmentName: targetEq.name,
+        timestamp: nowStr,
+        value: `${parameterUpdates?.length || targetEq.parameters?.length || 0} Targets Recalibrated`,
+        status: 'healthy',
+        notes: `Management calibration of physical data & standard benchmarks by ${employeeInfo.name} (${employeeInfo.designation}).`,
+        shift: 'General Shift',
+        inputBy: employeeInfo,
+      };
+
+      setParameterInputLogs((prev) => [mgmtLog, ...prev]);
     }
 
     setEquipmentList((prev) =>

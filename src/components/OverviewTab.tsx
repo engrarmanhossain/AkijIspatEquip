@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -16,6 +16,10 @@ import {
   FileCheck2,
   Image as ImageIcon,
   Zap,
+  History,
+  Search,
+  User,
+  Filter,
 } from 'lucide-react';
 import type { HealthStatus } from '../types';
 
@@ -26,6 +30,8 @@ export const OverviewTab: React.FC = () => {
     maintenanceRecords,
     alerts,
     stats,
+    parameterInputLogs,
+    openAuditModal,
     setActiveTab,
     setSelectedEquipmentId,
     startTroubleshootForEquipment,
@@ -37,6 +43,28 @@ export const OverviewTab: React.FC = () => {
   } = useDashboard();
 
   const { isManager, isAdmin } = useAuth();
+
+  const [auditFilter, setAuditFilter] = useState<'all' | 'alerts' | 'shiftA' | 'shiftBC'>('all');
+  const [auditSearch, setAuditSearch] = useState('');
+
+  const filteredOverviewLogs = useMemo(() => {
+    return (parameterInputLogs || []).filter((log) => {
+      if (auditFilter === 'alerts' && log.status === 'healthy') return false;
+      if (auditFilter === 'shiftA' && log.shift !== 'Shift A (Morning)') return false;
+      if (auditFilter === 'shiftBC' && log.shift === 'Shift A (Morning)') return false;
+
+      if (auditSearch.trim()) {
+        const q = auditSearch.toLowerCase();
+        return (
+          log.parameterName.toLowerCase().includes(q) ||
+          log.equipmentName.toLowerCase().includes(q) ||
+          log.inputBy?.name.toLowerCase().includes(q) ||
+          log.value.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [parameterInputLogs, auditFilter, auditSearch]);
 
   const getStatusBadge = (status: HealthStatus) => {
     switch (status) {
@@ -394,7 +422,64 @@ export const OverviewTab: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="mt-3.5 flex items-center justify-between text-xs">
+                    {/* Latest Manual Parameter Inspection Strip */}
+                    {(() => {
+                      const latestLog = (parameterInputLogs || []).find((l) => l.equipmentId === eq.id);
+                      if (latestLog) {
+                        return (
+                          <div className="mt-3 p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs space-y-1">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-[11px] font-bold text-slate-200 truncate flex items-center gap-1.5">
+                                <span
+                                  className={`w-2 h-2 rounded-full shrink-0 ${
+                                    latestLog.status === 'healthy'
+                                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+                                      : latestLog.status === 'warning'
+                                      ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]'
+                                      : 'bg-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.5)] animate-pulse'
+                                  }`}
+                                ></span>
+                                <span className="truncate">{latestLog.parameterName}</span>
+                              </span>
+                              <span
+                                className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 ${
+                                  latestLog.status === 'healthy'
+                                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                                    : latestLog.status === 'warning'
+                                    ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                                    : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                                }`}
+                              >
+                                {latestLog.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
+                              <span className="font-mono font-bold text-cyan-300 truncate">
+                                {latestLog.value}
+                              </span>
+                              <span className="text-[10px] text-slate-400 shrink-0 ml-1">
+                                by <strong className="text-slate-300">{latestLog.inputBy?.name?.split(' ')[0] || 'Staff'}</strong> ({latestLog.timestamp.slice(-5)})
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="mt-3 p-2 rounded-xl bg-slate-950/40 border border-slate-800/60 text-[11px] flex items-center justify-between text-slate-500">
+                          <span className="flex items-center gap-1.5 text-[10px]">
+                            <Clock className="w-3 h-3 text-slate-600" /> Standard benchmark targets active
+                          </span>
+                          <button
+                            onClick={() => openManualInputModal(eq)}
+                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold"
+                          >
+                            + Log Reading
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    <div className="mt-3 flex items-center justify-between text-xs">
                       {getStatusBadge(eq.status)}
                       <span className="text-[11px] text-slate-400 font-mono flex items-center">
                         <Clock className="w-3 h-3 mr-1 text-slate-500" />
@@ -572,6 +657,196 @@ export const OverviewTab: React.FC = () => {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Live Parameter Inspections & Operator Updates Stream (All Employees) */}
+      <div className="glass-panel rounded-2xl p-6 shadow-xl space-y-5 border border-slate-800 relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/60 to-transparent"></div>
+
+        {/* Section Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start space-x-3.5">
+            <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)] shrink-0">
+              <History className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2.5">
+                <h3 className="text-base font-bold text-white">Live Parameter Inspections & Condition Updates</h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Real-time Feed (All Staff)
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Audited timeline of manual observations, shift walk-down readings, and calibrations submitted across the fleet.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => openAuditModal()}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm"
+              title="Open full verifiable audit trail and export CSV report"
+            >
+              <FileCheck2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Full Audit Trail & CSV</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Search & Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setAuditFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                auditFilter === 'all'
+                  ? 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              All Readings ({(parameterInputLogs || []).length})
+            </button>
+            <button
+              onClick={() => setAuditFilter('alerts')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 transition ${
+                auditFilter === 'alerts'
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-sm shadow-amber-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              <span>Warnings & Faults ({(parameterInputLogs || []).filter((l) => l.status !== 'healthy').length})</span>
+            </button>
+            <button
+              onClick={() => setAuditFilter('shiftA')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                auditFilter === 'shiftA'
+                  ? 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              Shift A (Morning)
+            </button>
+            <button
+              onClick={() => setAuditFilter('shiftBC')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                auditFilter === 'shiftBC'
+                  ? 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/20'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'
+              }`}
+            >
+              Evening / Night Shift
+            </button>
+          </div>
+
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by tech, machine, or value..."
+              value={auditSearch}
+              onChange={(e) => setAuditSearch(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+        </div>
+
+        {/* Live Logs Stream */}
+        <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+          {filteredOverviewLogs.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs rounded-xl bg-slate-950/40 border border-slate-800/60">
+              <CheckCircle2 className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
+              <p className="font-semibold text-slate-300">No logs found matching your filter.</p>
+              <p className="text-[11px] text-slate-500 mt-1">Manual parameter entries recorded by any staff will appear here instantly.</p>
+            </div>
+          ) : (
+            filteredOverviewLogs.slice(0, 15).map((log) => {
+              const isMgmt = log.inputBy?.role === 'manager' || log.inputBy?.role === 'admin' || log.inputBy?.role === 'management';
+              return (
+                <div
+                  key={log.id}
+                  className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-slate-700/80 transition flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                >
+                  {/* Left: Employee Info & Timestamp */}
+                  <div className="flex items-center space-x-3 shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center font-bold text-white text-xs">
+                      {log.inputBy?.name ? log.inputBy.name.slice(0, 2).toUpperCase() : 'OP'}
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-1.5">
+                        <strong className="text-white font-medium">{log.inputBy?.name || 'Technician'}</strong>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                            isMgmt
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                          }`}
+                        >
+                          {isMgmt ? 'Management' : 'Field Tech'}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 flex items-center space-x-1 mt-0.5">
+                        <span>{log.inputBy?.designation}</span>
+                        <span>•</span>
+                        <span className="font-mono text-cyan-400">{log.shift || 'General Shift'}</span>
+                        <span>•</span>
+                        <span className="font-mono text-slate-400">{log.timestamp}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle: Equipment & Parameter Reading */}
+                  <div className="flex-1 px-0 md:px-4 space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-slate-200">{log.equipmentName}</span>
+                      <span className="font-mono text-[10px] text-slate-400">({log.equipmentId})</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-slate-400 font-semibold">{log.parameterName}:</span>
+                      <span className="font-mono font-bold text-cyan-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                        {log.value}
+                      </span>
+                      {log.notes && (
+                        <span className="text-[11px] text-slate-400 italic line-clamp-1">
+                          "{log.notes}"
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Condition Status Badge & Audit Button */}
+                  <div className="flex items-center space-x-3 shrink-0">
+                    <span
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase flex items-center space-x-1 ${
+                        log.status === 'healthy'
+                          ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                          : log.status === 'warning'
+                          ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                          : 'bg-rose-500/10 text-rose-300 border border-rose-500/30 animate-pulse'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                          log.status === 'healthy' ? 'bg-emerald-400' : log.status === 'warning' ? 'bg-amber-400' : 'bg-rose-400'
+                        }`}
+                      ></span>
+                      {log.status === 'healthy' ? 'Normal' : log.status}
+                    </span>
+
+                    <button
+                      onClick={() => openAuditModal(log.equipmentId, log.parameterId)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold transition"
+                    >
+                      Audit
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
