@@ -200,40 +200,10 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => handleDemoFill('tech')}
-              title="Technician Quick Fill"
+              title="LinkedIn Sign In"
               className="w-9 h-9 rounded-full neu-circle-btn flex items-center justify-center text-slate-600 hover:text-blue-600 font-bold text-xs cursor-pointer select-none"
             >
               in
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Demo Credentials Bar below the Neumorphic Card */}
-        <div className="neu-badge-raised rounded-2xl p-3 flex items-center justify-between text-[11px] text-slate-600">
-          <div className="flex items-center space-x-1 font-semibold text-slate-700">
-            <span>Demo Fill:</span>
-          </div>
-          <div className="flex items-center space-x-1.5">
-            <button
-              type="button"
-              onClick={() => handleDemoFill('admin')}
-              className="px-2 py-1 rounded-lg bg-blue-600 text-white font-bold text-[10px] shadow-sm hover:bg-blue-700 transition"
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoFill('manager')}
-              className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 font-semibold text-[10px] hover:bg-slate-300 transition"
-            >
-              Manager
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoFill('tech')}
-              className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 font-semibold text-[10px] hover:bg-slate-300 transition"
-            >
-              Tech
             </button>
           </div>
         </div>
