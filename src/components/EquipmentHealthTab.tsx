@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { useAuth } from '../context/AuthContext';
+import { calculateEquipmentHealth } from '../utils/healthCalculator';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -69,7 +70,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
 
   const { currentUser, isManager, isLowerManagement, isManagementEmployee, isAdmin, companySettings } = useAuth();
 
-  const [activeSensorKey, setActiveSensorKey] = useState<'vibration' | 'temperature' | 'pressure' | 'motorLoad'>('vibration');
+  const [activeSensorKey, setActiveSensorKey] = useState<string>('voltage');
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [paramPriorityFilter, setParamPriorityFilter] = useState<'All' | 'High Priority' | 'Less Priority'>('All');
 
@@ -94,38 +95,100 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
     ? equipmentList 
     : equipmentList.filter((e) => e.category === filterCategory);
 
-  const currentSensor: SensorParameter | undefined =
-    activeSensorKey === 'vibration'
-      ? selectedEquipment.telemetry.vibration
-      : activeSensorKey === 'temperature'
-      ? selectedEquipment.telemetry.temperature
-      : activeSensorKey === 'pressure'
-      ? selectedEquipment.telemetry.pressure
-      : selectedEquipment.telemetry.motorLoad;
+  const assessment = useMemo(() => {
+    return calculateEquipmentHealth(selectedEquipment.parameters);
+  }, [selectedEquipment.parameters]);
 
-  const vibParam = selectedEquipment.telemetry.vibration;
-  const tempParam = selectedEquipment.telemetry.temperature;
+  const availableSensors = useMemo(() => {
+    if (!selectedEquipment) return [];
+    const list: {
+      key: string;
+      label: string;
+      icon: any;
+      color: string;
+      hexColor: string;
+      sensor: SensorParameter;
+    }[] = [];
 
-  const mechanicalScore = Math.max(
-    10,
-    Math.min(100, Math.round(100 - (vibParam.value / vibParam.criticalThreshold) * 50))
-  );
+    if (selectedEquipment.telemetry.voltage) {
+      list.push({
+        key: 'voltage',
+        label: 'Voltage',
+        icon: Zap,
+        color: 'text-amber-400',
+        hexColor: '#f59e0b',
+        sensor: selectedEquipment.telemetry.voltage,
+      });
+    }
 
-  const thermalScore = Math.max(
-    10,
-    Math.min(100, Math.round(100 - (tempParam.value / tempParam.criticalThreshold) * 50))
-  );
+    if (selectedEquipment.telemetry.current) {
+      list.push({
+        key: 'current',
+        label: 'Current',
+        icon: Zap,
+        color: 'text-yellow-400',
+        hexColor: '#eab308',
+        sensor: selectedEquipment.telemetry.current,
+      });
+    }
 
-  const electricalScore = selectedEquipment.telemetry.motorLoad
-    ? Math.max(
-        15,
-        Math.min(100, Math.round(100 - (selectedEquipment.telemetry.motorLoad.value / selectedEquipment.telemetry.motorLoad.criticalThreshold) * 45))
-      )
-    : 92;
+    if (selectedEquipment.telemetry.temperature) {
+      list.push({
+        key: 'temperature',
+        label: 'Temperature',
+        icon: Thermometer,
+        color: 'text-rose-400',
+        hexColor: '#f43f5e',
+        sensor: selectedEquipment.telemetry.temperature,
+      });
+    }
 
-  const lubricationScore = selectedEquipment.telemetry.oilLevel
-    ? Math.round(selectedEquipment.telemetry.oilLevel.value)
-    : 88;
+    if (selectedEquipment.telemetry.vibration) {
+      list.push({
+        key: 'vibration',
+        label: 'Vibration',
+        icon: Activity,
+        color: 'text-cyan-400',
+        hexColor: '#06b6d4',
+        sensor: selectedEquipment.telemetry.vibration,
+      });
+    }
+
+    if (selectedEquipment.telemetry.pressure) {
+      list.push({
+        key: 'pressure',
+        label: 'Pressure',
+        icon: Gauge,
+        color: 'text-blue-400',
+        hexColor: '#3b82f6',
+        sensor: selectedEquipment.telemetry.pressure,
+      });
+    }
+
+    if (selectedEquipment.telemetry.motorLoad && !selectedEquipment.telemetry.current) {
+      list.push({
+        key: 'motorLoad',
+        label: 'Motor Load',
+        icon: Zap,
+        color: 'text-yellow-400',
+        hexColor: '#eab308',
+        sensor: selectedEquipment.telemetry.motorLoad,
+      });
+    }
+
+    return list;
+  }, [selectedEquipment]);
+
+  const activeSensorObj = useMemo(() => {
+    return availableSensors.find((s) => s.key === activeSensorKey) || availableSensors[0];
+  }, [availableSensors, activeSensorKey]);
+
+  const currentSensor: SensorParameter | undefined = activeSensorObj?.sensor;
+
+  const mechanicalScore = assessment.subsystems.mechanical.score;
+  const thermalScore = assessment.subsystems.thermal.score;
+  const electricalScore = assessment.subsystems.electrical.score;
+  const processScore = assessment.subsystems.process.score;
 
   const getHealthColor = (score: number) => {
     if (score >= 80) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
@@ -471,17 +534,17 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
           </div>
         </div>
 
-        {/* Subsystem Health Matrix */}
+        {/* Subsystem Health Matrix (Directly driven by manual parameter entries) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
             <span className="text-[10px] uppercase font-semibold text-slate-400 block">Mechanical Health</span>
             <div className="flex items-baseline justify-between mt-1">
               <span className="text-lg font-bold font-mono text-white">{mechanicalScore}%</span>
-              <span className="text-xs text-slate-400">Bearing / Balance</span>
+              <span className="text-xs text-slate-400 truncate ml-1">{assessment.subsystems.mechanical.details}</span>
             </div>
             <div className="mt-1.5 w-full bg-slate-800 rounded-full h-1 overflow-hidden">
               <div
-                className={`h-1 rounded-full ${mechanicalScore >= 75 ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                className={`h-1 rounded-full ${mechanicalScore >= 80 ? 'bg-emerald-400' : mechanicalScore >= 60 ? 'bg-amber-400' : 'bg-rose-500'}`}
                 style={{ width: `${mechanicalScore}%` }}
               ></div>
             </div>
@@ -491,40 +554,40 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
             <span className="text-[10px] uppercase font-semibold text-slate-400 block">Thermal Equilibrium</span>
             <div className="flex items-baseline justify-between mt-1">
               <span className="text-lg font-bold font-mono text-white">{thermalScore}%</span>
-              <span className="text-xs text-slate-400">Heat Dissipation</span>
+              <span className="text-xs text-slate-400 truncate ml-1">{assessment.subsystems.thermal.details}</span>
             </div>
             <div className="mt-1.5 w-full bg-slate-800 rounded-full h-1 overflow-hidden">
               <div
-                className={`h-1 rounded-full ${thermalScore >= 75 ? 'bg-emerald-400' : 'bg-rose-400'}`}
+                className={`h-1 rounded-full ${thermalScore >= 80 ? 'bg-emerald-400' : thermalScore >= 60 ? 'bg-amber-400' : 'bg-rose-500'}`}
                 style={{ width: `${thermalScore}%` }}
               ></div>
             </div>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-            <span className="text-[10px] uppercase font-semibold text-slate-400 block">Electrical & Drive</span>
+            <span className="text-[10px] uppercase font-semibold text-slate-400 block">Electrical & Power</span>
             <div className="flex items-baseline justify-between mt-1">
               <span className="text-lg font-bold font-mono text-white">{electricalScore}%</span>
-              <span className="text-xs text-slate-400">Motor / Current</span>
+              <span className="text-xs text-slate-400 truncate ml-1">{assessment.subsystems.electrical.details}</span>
             </div>
             <div className="mt-1.5 w-full bg-slate-800 rounded-full h-1 overflow-hidden">
               <div
-                className="h-1 rounded-full bg-emerald-400"
+                className={`h-1 rounded-full ${electricalScore >= 80 ? 'bg-emerald-400' : electricalScore >= 60 ? 'bg-amber-400' : 'bg-rose-500'}`}
                 style={{ width: `${electricalScore}%` }}
               ></div>
             </div>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-            <span className="text-[10px] uppercase font-semibold text-slate-400 block">Hydraulic & Lubrication</span>
+            <span className="text-[10px] uppercase font-semibold text-slate-400 block">Process & Controls</span>
             <div className="flex items-baseline justify-between mt-1">
-              <span className="text-lg font-bold font-mono text-white">{lubricationScore}%</span>
-              <span className="text-xs text-slate-400">Lube Viscosity</span>
+              <span className="text-lg font-bold font-mono text-white">{processScore}%</span>
+              <span className="text-xs text-slate-400 truncate ml-1">{assessment.subsystems.process.details}</span>
             </div>
             <div className="mt-1.5 w-full bg-slate-800 rounded-full h-1 overflow-hidden">
               <div
-                className="h-1 rounded-full bg-cyan-400"
-                style={{ width: `${lubricationScore}%` }}
+                className={`h-1 rounded-full ${processScore >= 80 ? 'bg-cyan-400' : processScore >= 60 ? 'bg-amber-400' : 'bg-rose-500'}`}
+                style={{ width: `${processScore}%` }}
               ></div>
             </div>
           </div>
@@ -618,202 +681,76 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
         </div>
       </div>
 
-      {/* Sensor Gauge Cards Grid */}
+      {/* Sensor Gauge Cards Grid (Dynamic channels: Voltage, Current, Temperature, Vibration, Pressure, etc.) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Vibration Card */}
-        {selectedEquipment.telemetry.vibration && (
-          <div
-            onClick={() => setActiveSensorKey('vibration')}
-            className={`p-4 rounded-xl border cursor-pointer transition-all ${
-              activeSensorKey === 'vibration'
-                ? 'bg-slate-800/90 border-cyan-500 ring-1 ring-cyan-500/50 shadow-lg'
-                : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
-                <Activity className="w-3.5 h-3.5 mr-1.5 text-cyan-400" /> Vibration
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
-                Warn: {selectedEquipment.telemetry.vibration.warningThreshold}
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline space-x-1.5">
-              <span
-                className={`text-3xl font-extrabold font-mono ${
-                  selectedEquipment.telemetry.vibration.value >= selectedEquipment.telemetry.vibration.criticalThreshold
-                    ? 'text-rose-400'
-                    : selectedEquipment.telemetry.vibration.value >= selectedEquipment.telemetry.vibration.warningThreshold
-                    ? 'text-amber-400'
-                    : 'text-white'
-                }`}
-              >
-                {selectedEquipment.telemetry.vibration.value}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">
-                {selectedEquipment.telemetry.vibration.unit}
-              </span>
-            </div>
-            <div className="mt-3 w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-              <div
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  selectedEquipment.telemetry.vibration.value >= selectedEquipment.telemetry.vibration.criticalThreshold
-                    ? 'bg-rose-500'
-                    : selectedEquipment.telemetry.vibration.value >= selectedEquipment.telemetry.vibration.warningThreshold
-                    ? 'bg-amber-400'
-                    : 'bg-emerald-400'
-                }`}
-                style={{
-                  width: `${Math.min(
-                    100,
-                    (selectedEquipment.telemetry.vibration.value / selectedEquipment.telemetry.vibration.max) * 100
-                  )}%`,
-                }}
-              ></div>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400">{selectedEquipment.telemetry.vibration.name}</p>
-          </div>
-        )}
+        {availableSensors.map((item) => {
+          const isSelected = activeSensorObj?.key === item.key;
+          const s = item.sensor;
+          const Icon = item.icon;
+          const pct = Math.min(100, Math.max(0, (s.value / s.max) * 100));
+          const isCritical = s.criticalThreshold > s.warningThreshold 
+            ? s.value >= s.criticalThreshold 
+            : s.value <= s.criticalThreshold;
+          const isWarning = s.criticalThreshold > s.warningThreshold 
+            ? s.value >= s.warningThreshold 
+            : s.value <= s.warningThreshold;
 
-        {/* Temperature Card */}
-        {selectedEquipment.telemetry.temperature && (
-          <div
-            onClick={() => setActiveSensorKey('temperature')}
-            className={`p-4 rounded-xl border cursor-pointer transition-all ${
-              activeSensorKey === 'temperature'
-                ? 'bg-slate-800/90 border-cyan-500 ring-1 ring-cyan-500/50 shadow-lg'
-                : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
-                <Thermometer className="w-3.5 h-3.5 mr-1.5 text-amber-400" /> Temperature
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
-                Limit: {selectedEquipment.telemetry.temperature.warningThreshold}°C
-              </span>
+          return (
+            <div
+              key={item.key}
+              onClick={() => setActiveSensorKey(item.key)}
+              className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                isSelected
+                  ? 'bg-slate-800/90 border-cyan-500 ring-1 ring-cyan-500/50 shadow-lg'
+                  : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
+                  <Icon className={`w-3.5 h-3.5 mr-1.5 ${item.color}`} /> {item.label}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
+                  Warn: {s.warningThreshold} {s.unit}
+                </span>
+              </div>
+              <div className="mt-3 flex items-baseline space-x-1.5">
+                <span
+                  className={`text-3xl font-extrabold font-mono ${
+                    isCritical
+                      ? 'text-rose-400'
+                      : isWarning
+                      ? 'text-amber-400'
+                      : 'text-white'
+                  }`}
+                >
+                  {s.value}
+                </span>
+                <span className="text-xs text-slate-400 font-medium">
+                  {s.unit}
+                </span>
+              </div>
+              <div className="mt-3 w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    isCritical
+                      ? 'bg-rose-500'
+                      : isWarning
+                      ? 'bg-amber-400'
+                      : 'bg-emerald-400'
+                  }`}
+                  style={{ width: `${pct}%` }}
+                ></div>
+              </div>
+              <p className="mt-2 text-[11px] text-slate-400 truncate">{s.name}</p>
             </div>
-            <div className="mt-3 flex items-baseline space-x-1.5">
-              <span
-                className={`text-3xl font-extrabold font-mono ${
-                  selectedEquipment.telemetry.temperature.value >= selectedEquipment.telemetry.temperature.criticalThreshold
-                    ? 'text-rose-400'
-                    : selectedEquipment.telemetry.temperature.value >= selectedEquipment.telemetry.temperature.warningThreshold
-                    ? 'text-amber-400'
-                    : 'text-white'
-                }`}
-              >
-                {selectedEquipment.telemetry.temperature.value}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">
-                {selectedEquipment.telemetry.temperature.unit}
-              </span>
-            </div>
-            <div className="mt-3 w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-              <div
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  selectedEquipment.telemetry.temperature.value >= selectedEquipment.telemetry.temperature.criticalThreshold
-                    ? 'bg-rose-500'
-                    : selectedEquipment.telemetry.temperature.value >= selectedEquipment.telemetry.temperature.warningThreshold
-                    ? 'bg-amber-400'
-                    : 'bg-emerald-400'
-                }`}
-                style={{
-                  width: `${Math.min(
-                    100,
-                    (selectedEquipment.telemetry.temperature.value / selectedEquipment.telemetry.temperature.max) * 100
-                  )}%`,
-                }}
-              ></div>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400">{selectedEquipment.telemetry.temperature.name}</p>
-          </div>
-        )}
+          );
+        })}
 
-        {/* Pressure / Load Card */}
-        {selectedEquipment.telemetry.pressure ? (
-          <div
-            onClick={() => setActiveSensorKey('pressure')}
-            className={`p-4 rounded-xl border cursor-pointer transition-all ${
-              activeSensorKey === 'pressure'
-                ? 'bg-slate-800/90 border-cyan-500 ring-1 ring-cyan-500/50 shadow-lg'
-                : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
-                <Gauge className="w-3.5 h-3.5 mr-1.5 text-blue-400" /> Pressure
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
-                Warn: {selectedEquipment.telemetry.pressure.warningThreshold} bar
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline space-x-1.5">
-              <span className="text-3xl font-extrabold font-mono text-white">
-                {selectedEquipment.telemetry.pressure.value}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">
-                {selectedEquipment.telemetry.pressure.unit}
-              </span>
-            </div>
-            <div className="mt-3 w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-              <div
-                className="h-2 rounded-full bg-blue-500 transition-all duration-300"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    (selectedEquipment.telemetry.pressure.value / selectedEquipment.telemetry.pressure.max) * 100
-                  )}%`,
-                }}
-              ></div>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400">{selectedEquipment.telemetry.pressure.name}</p>
-          </div>
-        ) : selectedEquipment.telemetry.motorLoad ? (
-          <div
-            onClick={() => setActiveSensorKey('motorLoad')}
-            className={`p-4 rounded-xl border cursor-pointer transition-all ${
-              activeSensorKey === 'motorLoad'
-                ? 'bg-slate-800/90 border-cyan-500 ring-1 ring-cyan-500/50 shadow-lg'
-                : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
-                <Zap className="w-3.5 h-3.5 mr-1.5 text-yellow-400" /> Motor Current
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
-                Warn: {selectedEquipment.telemetry.motorLoad.warningThreshold}
-              </span>
-            </div>
-            <div className="mt-3 flex items-baseline space-x-1.5">
-              <span className="text-3xl font-extrabold font-mono text-white">
-                {selectedEquipment.telemetry.motorLoad.value}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">
-                {selectedEquipment.telemetry.motorLoad.unit}
-              </span>
-            </div>
-            <div className="mt-3 w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-              <div
-                className="h-2 rounded-full bg-yellow-500 transition-all duration-300"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    (selectedEquipment.telemetry.motorLoad.value / selectedEquipment.telemetry.motorLoad.max) * 100
-                  )}%`,
-                }}
-              ></div>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400">{selectedEquipment.telemetry.motorLoad.name}</p>
-          </div>
-        ) : null}
-
-        {/* Auxiliary Metrics Card */}
+        {/* Auxiliary Metrics Card (if fewer than 4 primary sensors, or for secondary info) */}
         <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Auxiliary Sensor
+              Auxiliary Sensor / KPI
             </span>
             <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
           </div>
@@ -823,7 +760,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
                 {selectedEquipment.telemetry.rpm.value.toLocaleString()}
               </span>
               <span className="text-xs text-slate-400 ml-1">RPM</span>
-              <p className="mt-1 text-[11px] text-slate-400">Spindle Speed Velocity</p>
+              <p className="mt-1 text-[11px] text-slate-400">Operating Velocity / Speed</p>
             </div>
           ) : selectedEquipment.telemetry.flowRate ? (
             <div className="mt-3">
@@ -831,7 +768,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
                 {selectedEquipment.telemetry.flowRate.value}
               </span>
               <span className="text-xs text-slate-400 ml-1">m³/h</span>
-              <p className="mt-1 text-[11px] text-slate-400">Slurry Flow Rate</p>
+              <p className="mt-1 text-[11px] text-slate-400">Process Flow Rate</p>
             </div>
           ) : (
             <div className="mt-3">
@@ -854,59 +791,24 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
               <span>Real-time Telemetry Trend Analysis</span>
             </h3>
             <p className="text-xs text-slate-400">
-              High-frequency sensor stream with dynamic warning & critical safety limits.
+              High-frequency sensor stream for {activeSensorObj?.label || 'Telemetry'} with dynamic safety limits.
             </p>
           </div>
 
-          <div className="flex items-center space-x-2 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            {selectedEquipment.telemetry.vibration && (
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+            {availableSensors.map((s) => (
               <button
-                onClick={() => setActiveSensorKey('vibration')}
+                key={s.key}
+                onClick={() => setActiveSensorKey(s.key)}
                 className={`px-3 py-1 rounded-lg font-medium transition ${
-                  activeSensorKey === 'vibration'
-                    ? 'bg-cyan-500 text-slate-950 font-bold'
+                  activeSensorObj?.key === s.key
+                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Vibration
+                {s.label}
               </button>
-            )}
-            {selectedEquipment.telemetry.temperature && (
-              <button
-                onClick={() => setActiveSensorKey('temperature')}
-                className={`px-3 py-1 rounded-lg font-medium transition ${
-                  activeSensorKey === 'temperature'
-                    ? 'bg-amber-500 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Temperature
-              </button>
-            )}
-            {selectedEquipment.telemetry.pressure && (
-              <button
-                onClick={() => setActiveSensorKey('pressure')}
-                className={`px-3 py-1 rounded-lg font-medium transition ${
-                  activeSensorKey === 'pressure'
-                    ? 'bg-blue-500 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Pressure
-              </button>
-            )}
-            {selectedEquipment.telemetry.motorLoad && (
-              <button
-                onClick={() => setActiveSensorKey('motorLoad')}
-                className={`px-3 py-1 rounded-lg font-medium transition ${
-                  activeSensorKey === 'motorLoad'
-                    ? 'bg-yellow-500 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Load
-              </button>
-            )}
+            ))}
           </div>
         </div>
 
@@ -918,24 +820,12 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
                   <linearGradient id="sensorGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop
                       offset="5%"
-                      stopColor={
-                        activeSensorKey === 'vibration'
-                          ? '#06b6d4'
-                          : activeSensorKey === 'temperature'
-                          ? '#f59e0b'
-                          : '#3b82f6'
-                      }
+                      stopColor={activeSensorObj?.hexColor || '#06b6d4'}
                       stopOpacity={0.4}
                     />
                     <stop
                       offset="95%"
-                      stopColor={
-                        activeSensorKey === 'vibration'
-                          ? '#06b6d4'
-                          : activeSensorKey === 'temperature'
-                          ? '#f59e0b'
-                          : '#3b82f6'
-                      }
+                      stopColor={activeSensorObj?.hexColor || '#06b6d4'}
                       stopOpacity={0.0}
                     />
                   </linearGradient>
@@ -984,13 +874,7 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
                 <Area
                   type="monotone"
                   dataKey="val"
-                  stroke={
-                    activeSensorKey === 'vibration'
-                      ? '#06b6d4'
-                      : activeSensorKey === 'temperature'
-                      ? '#f59e0b'
-                      : '#3b82f6'
-                  }
+                  stroke={activeSensorObj?.hexColor || '#06b6d4'}
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#sensorGradient)"
@@ -1167,6 +1051,46 @@ export const EquipmentHealthTab: React.FC<{ onOpenFaultModal: () => void }> = ({
                       >
                         {param.priority}
                       </span>
+                      {(() => {
+                        const ln = param.name.toLowerCase();
+                        const lu = (param.unit || '').toLowerCase();
+                        if (ln.includes('voltage') || ln.includes('bus') || lu.includes('v')) {
+                          return (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-amber-400" /> Voltage
+                            </span>
+                          );
+                        }
+                        if (ln.includes('current') || lu.includes('a')) {
+                          return (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/10 text-yellow-300 border border-yellow-500/30 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-yellow-400" /> Current
+                            </span>
+                          );
+                        }
+                        if (ln.includes('temp') || lu.includes('°c') || ln.includes('oti') || ln.includes('wti')) {
+                          return (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                              <Thermometer className="w-3 h-3 text-rose-400" /> Temperature
+                            </span>
+                          );
+                        }
+                        if (ln.includes('vibration') || lu.includes('mm/s')) {
+                          return (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                              <Activity className="w-3 h-3 text-cyan-400" /> Vibration
+                            </span>
+                          );
+                        }
+                        if (ln.includes('pressure') || lu.includes('bar')) {
+                          return (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-300 border border-blue-500/30 flex items-center gap-1">
+                              <Gauge className="w-3 h-3 text-blue-400" /> Pressure
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                       <span className="font-bold text-sm text-white">{param.name}</span>
                       {param.unit && (
                         <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/40">

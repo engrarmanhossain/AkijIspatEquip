@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js",
     "build": "node ./node_modules/vite/bin/vite.js build",
-    "preview": "node ./node_modules/vite/bin/vite.js preview"
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "push": "git add -A && git commit -m \"chore: auto update equipment health status\" && git push origin main",
+    "deploy": "node ./node_modules/vite/bin/vite.js build && git add -A && git commit -m \"chore: build & auto push update\" && git push origin main"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",

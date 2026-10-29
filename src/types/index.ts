@@ -112,8 +112,10 @@ export interface SensorParameter {
 }
 
 export interface EquipmentTelemetry {
-  vibration: SensorParameter;
+  voltage?: SensorParameter;
+  current?: SensorParameter;
   temperature: SensorParameter;
+  vibration?: SensorParameter;
   pressure?: SensorParameter;
   motorLoad?: SensorParameter;
   rpm?: SensorParameter;

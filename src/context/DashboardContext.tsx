@@ -24,6 +24,7 @@ import {
   INITIAL_PARAMETER_INPUT_LOGS,
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
+import { calculateEquipmentHealth, synchronizeTelemetryFromParameters } from '../utils/healthCalculator';
 
 interface DashboardContextType {
   equipmentList: Equipment[];
@@ -189,7 +190,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>(INITIAL_EQUIPMENT[0].id);
   const [activeTab, setActiveTab] = useState<'overview' | 'health' | 'troubleshoot' | 'register' | 'analytics' | 'employees'>('overview');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSimulating, setIsSimulating] = useState<boolean>(true);
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [activeDiagnosticFaultCode, setActiveDiagnosticFaultCode] = useState<string | null>(null);
 
   // Modal states
@@ -293,7 +294,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [equipmentList, maintenanceRecords, alerts]);
 
-  // Telemetry Simulation Loop
+  // Telemetry Simulation Loop (Subtle live telemetry fluctuations; health status remains anchored to manual parameter entries)
   useEffect(() => {
     if (!isSimulating) return;
 
@@ -307,39 +308,45 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
 
           const updatedTelemetry: EquipmentTelemetry = { ...eq.telemetry };
-          let penaltyScore = 0;
+
+          if (updatedTelemetry.voltage) {
+            const volt = updatedTelemetry.voltage;
+            const delta = (Math.random() - 0.5) * (volt.max * 0.005);
+            const newVal = Math.max(volt.min, Math.min(volt.max, Number((volt.value + delta).toFixed(1))));
+            const newHistory = [...(volt.history || []).slice(1), { timestamp: nowTime, val: newVal }];
+            updatedTelemetry.voltage = { ...volt, value: newVal, history: newHistory };
+          }
+
+          if (updatedTelemetry.current) {
+            const curr = updatedTelemetry.current;
+            const delta = (Math.random() - 0.5) * (curr.max * 0.008);
+            const newVal = Math.max(curr.min, Math.min(curr.max, Number((curr.value + delta).toFixed(1))));
+            const newHistory = [...(curr.history || []).slice(1), { timestamp: nowTime, val: newVal }];
+            updatedTelemetry.current = { ...curr, value: newVal, history: newHistory };
+          }
 
           if (updatedTelemetry.vibration) {
             const vib = updatedTelemetry.vibration;
-            const delta = (Math.random() - 0.48) * 0.18;
+            const delta = (Math.random() - 0.48) * 0.12;
             const newVal = Math.max(0.1, Number((vib.value + delta).toFixed(2)));
             const newHistory = [...(vib.history || []).slice(1), { timestamp: nowTime, val: newVal }];
             updatedTelemetry.vibration = { ...vib, value: newVal, history: newHistory };
-
-            if (newVal >= vib.criticalThreshold) penaltyScore += 35;
-            else if (newVal >= vib.warningThreshold) penaltyScore += 18;
           }
 
           if (updatedTelemetry.temperature) {
             const temp = updatedTelemetry.temperature;
-            const delta = (Math.random() - 0.47) * 0.4;
+            const delta = (Math.random() - 0.48) * 0.3;
             const newVal = Math.max(20, Number((temp.value + delta).toFixed(1)));
             const newHistory = [...(temp.history || []).slice(1), { timestamp: nowTime, val: newVal }];
             updatedTelemetry.temperature = { ...temp, value: newVal, history: newHistory };
-
-            if (newVal >= temp.criticalThreshold) penaltyScore += 40;
-            else if (newVal >= temp.warningThreshold) penaltyScore += 20;
           }
 
           if (updatedTelemetry.pressure) {
             const press = updatedTelemetry.pressure;
-            const delta = (Math.random() - 0.5) * 0.1;
+            const delta = (Math.random() - 0.5) * 0.05;
             const newVal = Math.max(0, Number((press.value + delta).toFixed(2)));
             const newHistory = [...(press.history || []).slice(1), { timestamp: nowTime, val: newVal }];
             updatedTelemetry.pressure = { ...press, value: newVal, history: newHistory };
-
-            if (newVal <= press.criticalThreshold) penaltyScore += 25;
-            else if (newVal <= press.warningThreshold) penaltyScore += 12;
           }
 
           if (updatedTelemetry.motorLoad) {
@@ -348,20 +355,15 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const newVal = Math.max(0, Math.min(load.max, Number((load.value + delta).toFixed(1))));
             const newHistory = [...(load.history || []).slice(1), { timestamp: nowTime, val: newVal }];
             updatedTelemetry.motorLoad = { ...load, value: newVal, history: newHistory };
-
-            if (newVal >= load.criticalThreshold) penaltyScore += 20;
           }
 
-          const newHealthScore = Math.max(10, Math.min(100, Math.round(100 - penaltyScore)));
-          let computedStatus = eq.status;
-          if (newHealthScore < 50) computedStatus = 'critical';
-          else if (newHealthScore < 75) computedStatus = 'warning';
-          else computedStatus = 'healthy';
+          // Equipment Health Status is strictly anchored to manual parameter entries
+          const assessment = calculateEquipmentHealth(eq.parameters);
 
           return {
             ...eq,
-            healthScore: newHealthScore,
-            status: computedStatus,
+            healthScore: assessment.healthScore,
+            status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
             telemetry: updatedTelemetry,
           };
         })
@@ -853,22 +855,18 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           };
         });
 
-        // Compute updated health status
-        let penalty = 0;
-        updatedParams.forEach((p) => {
-          if (p.status === 'critical') penalty += p.priority === 'High Priority' ? 30 : 15;
-          else if (p.status === 'warning') penalty += p.priority === 'High Priority' ? 15 : 8;
-        });
-        const newScore = Math.max(15, Math.min(100, 100 - penalty));
-        let newStatus = eq.status;
-        if (newScore < 50) newStatus = 'critical';
-        else if (newScore < 75) newStatus = 'warning';
-        else if (eq.status !== 'maintenance' && eq.status !== 'offline') newStatus = 'healthy';
+        // Synchronize telemetry channels (voltage, current, temperature, vibration, pressure)
+        const updatedTelemetry = synchronizeTelemetryFromParameters(eq.telemetry, updatedParams);
+
+        // Derive overall health score & status directly from manual parameter observations
+        const assessment = calculateEquipmentHealth(updatedParams);
+        const newStatus = eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status;
 
         return {
           ...eq,
-          healthScore: newScore,
+          healthScore: assessment.healthScore,
           status: newStatus,
+          telemetry: updatedTelemetry,
           parameters: updatedParams,
         };
       })
@@ -945,21 +943,18 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           };
         });
 
-        let penalty = 0;
-        updatedParams.forEach((p) => {
-          if (p.status === 'critical') penalty += p.priority === 'High Priority' ? 30 : 15;
-          else if (p.status === 'warning') penalty += p.priority === 'High Priority' ? 15 : 8;
-        });
-        const newScore = Math.max(15, Math.min(100, 100 - penalty));
-        let newStatus = eq.status;
-        if (newScore < 50) newStatus = 'critical';
-        else if (newScore < 75) newStatus = 'warning';
-        else if (eq.status !== 'maintenance' && eq.status !== 'offline') newStatus = 'healthy';
+        // Synchronize telemetry channels (voltage, current, temperature, vibration, pressure)
+        const updatedTelemetry = synchronizeTelemetryFromParameters(eq.telemetry, updatedParams);
+
+        // Derive overall health score & status directly from manual parameter observations
+        const assessment = calculateEquipmentHealth(updatedParams);
+        const newStatus = eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status;
 
         return {
           ...eq,
-          healthScore: newScore,
+          healthScore: assessment.healthScore,
           status: newStatus,
+          telemetry: updatedTelemetry,
           parameters: updatedParams,
         };
       })
@@ -984,10 +979,18 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setEquipmentList((prev) =>
       prev.map((eq) => {
         if (eq.id !== equipmentId) return eq;
+        const updatedParams = parameterUpdates || eq.parameters || [];
+        const updatedTelemetry = synchronizeTelemetryFromParameters(eq.telemetry, updatedParams);
+        const assessment = calculateEquipmentHealth(updatedParams);
+        const newStatus = eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status;
+
         return {
           ...eq,
           ...physicalUpdates,
-          parameters: parameterUpdates || eq.parameters,
+          healthScore: assessment.healthScore,
+          status: newStatus,
+          telemetry: updatedTelemetry,
+          parameters: updatedParams,
         };
       })
     );

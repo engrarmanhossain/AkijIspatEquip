@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { useAuth } from '../context/AuthContext';
+import { calculateEquipmentHealth } from '../utils/healthCalculator';
 import {
   X,
   ClipboardList,
@@ -72,6 +73,32 @@ export const ManualParameterInputModal: React.FC = () => {
   if (!manualInputModalOpen || !equipment) return null;
 
   const currentParamObj = (equipment.parameters || []).find((p) => p.id === selectedParamId);
+
+  const simulatedAssessment = useMemo(() => {
+    if (!equipment?.parameters) return null;
+    if (mode === 'single') {
+      const simulated = equipment.parameters.map((p) => {
+        if (p.id !== selectedParamId) return p;
+        return {
+          ...p,
+          currentValue: measuredValue || p.currentValue,
+          status,
+        };
+      });
+      return calculateEquipmentHealth(simulated);
+    } else {
+      const simulated = equipment.parameters.map((p) => {
+        const row = batchData[p.id];
+        if (!row) return p;
+        return {
+          ...p,
+          currentValue: row.value || p.currentValue,
+          status: row.status,
+        };
+      });
+      return calculateEquipmentHealth(simulated);
+    }
+  }, [equipment?.parameters, mode, selectedParamId, measuredValue, status, batchData]);
 
   const handleSelectParam = (paramId: string) => {
     setSelectedParamId(paramId);
@@ -223,6 +250,43 @@ export const ManualParameterInputModal: React.FC = () => {
           <div className="mx-6 mt-4 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
             <span>{successToast}</span>
+          </div>
+        )}
+
+        {/* Live Equipment Health Impact Preview */}
+        {simulatedAssessment && (
+          <div className="mx-6 mt-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center space-x-2">
+              <span className="text-slate-400 font-semibold">Predicted Health Impact:</span>
+              <span
+                className={`font-mono font-extrabold text-sm ${
+                  simulatedAssessment.healthScore >= 80
+                    ? 'text-emerald-400'
+                    : simulatedAssessment.healthScore >= 60
+                    ? 'text-amber-400'
+                    : 'text-rose-400'
+                }`}
+              >
+                {simulatedAssessment.healthScore}%
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  simulatedAssessment.status === 'healthy'
+                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                    : simulatedAssessment.status === 'warning'
+                    ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                    : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                }`}
+              >
+                {simulatedAssessment.status}
+              </span>
+            </div>
+            <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
+              <span>⚡ Elec: <strong className="text-slate-200">{simulatedAssessment.subsystems.electrical.score}%</strong></span>
+              <span>🌡️ Therm: <strong className="text-slate-200">{simulatedAssessment.subsystems.thermal.score}%</strong></span>
+              <span>📳 Mech: <strong className="text-slate-200">{simulatedAssessment.subsystems.mechanical.score}%</strong></span>
+              <span>⚙️ Proc: <strong className="text-slate-200">{simulatedAssessment.subsystems.process.score}%</strong></span>
+            </div>
           </div>
         )}
 
