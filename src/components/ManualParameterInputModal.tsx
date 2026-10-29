@@ -161,10 +161,10 @@ export const ManualParameterInputModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-950/80 border-b border-slate-800/80">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+        {/* Header - Fixed & Pinned */}
+        <div className="flex items-center justify-between px-6 py-3.5 bg-slate-950/90 border-b border-slate-800/80 shrink-0">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
               <ClipboardList className="w-5 h-5" />
@@ -190,8 +190,8 @@ export const ManualParameterInputModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Current Operator Identification Banner */}
-        <div className="px-6 py-2.5 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between text-xs">
+        {/* Current Operator Identification Banner - Fixed & Pinned */}
+        <div className="px-6 py-2 bg-slate-950/60 border-b border-slate-800/60 flex items-center justify-between text-xs shrink-0">
           <div className="flex items-center space-x-2 text-slate-300">
             <User className="w-4 h-4 text-cyan-400" />
             <span>
@@ -204,8 +204,8 @@ export const ManualParameterInputModal: React.FC = () => {
           </span>
         </div>
 
-        {/* Mode switcher tabs */}
-        <div className="px-6 pt-4 pb-1 flex items-center justify-between border-b border-slate-800/80">
+        {/* Mode switcher tabs - Fixed & Pinned */}
+        <div className="px-6 pt-3 pb-2 flex items-center justify-between border-b border-slate-800/80 shrink-0 bg-slate-900/95">
           <div className="flex space-x-2">
             <button
               type="button"
@@ -248,217 +248,220 @@ export const ManualParameterInputModal: React.FC = () => {
         </div>
 
         {successToast && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in">
+          <div className="mx-6 mt-3 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2 shrink-0 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
             <span>{successToast}</span>
           </div>
         )}
 
-        {/* Live Equipment Health Impact Preview */}
-        {simulatedAssessment && (
-          <div className="mx-6 mt-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <div className="flex items-center space-x-2">
-              <span className="text-slate-400 font-semibold">Predicted Health Impact:</span>
-              <span
-                className={`font-mono font-extrabold text-sm ${
-                  simulatedAssessment.healthScore >= 80
-                    ? 'text-emerald-400'
-                    : simulatedAssessment.healthScore >= 60
-                    ? 'text-amber-400'
-                    : 'text-rose-400'
-                }`}
-              >
-                {simulatedAssessment.healthScore}%
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                  simulatedAssessment.status === 'healthy'
-                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
-                    : simulatedAssessment.status === 'warning'
-                    ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
-                    : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
-                }`}
-              >
-                {simulatedAssessment.status}
-              </span>
-            </div>
-            <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
-              <span>⚡ Elec: <strong className="text-slate-200">{simulatedAssessment.subsystems.electrical.score}%</strong></span>
-              <span>🌡️ Therm: <strong className="text-slate-200">{simulatedAssessment.subsystems.thermal.score}%</strong></span>
-              <span>📳 Mech: <strong className="text-slate-200">{simulatedAssessment.subsystems.mechanical.score}%</strong></span>
-              <span>⚙️ Proc: <strong className="text-slate-200">{simulatedAssessment.subsystems.process.score}%</strong></span>
-            </div>
-          </div>
-        )}
-
         {/* Mode 1: Single Parameter Input */}
         {mode === 'single' && (
-          <form onSubmit={handleSingleSubmit} className="p-6 space-y-4">
-            {/* Parameter Selector */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Select Equipment Health Parameter
-              </label>
-              <select
-                value={selectedParamId}
-                onChange={(e) => handleSelectParam(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
-              >
-                {(equipment.parameters || []).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    [{p.priority}] {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Standard Target / Benchmark Reference Box */}
-            {currentParamObj && (
-              <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-800/50 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-semibold text-cyan-300 flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5" />
-                    Standard Benchmark Specification
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      currentParamObj.priority === 'High Priority'
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                    }`}
-                  >
-                    {currentParamObj.priority}
-                  </span>
+          <form onSubmit={handleSingleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            {/* Scrollable Form Body */}
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto pr-3">
+              {/* Live Equipment Health Impact Preview */}
+              {simulatedAssessment && (
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-slate-400 font-semibold">Predicted Health Impact:</span>
+                    <span
+                      className={`font-mono font-extrabold text-sm ${
+                        simulatedAssessment.healthScore >= 80
+                          ? 'text-emerald-400'
+                          : simulatedAssessment.healthScore >= 60
+                          ? 'text-amber-400'
+                          : 'text-rose-400'
+                      }`}
+                    >
+                      {simulatedAssessment.healthScore}%
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        simulatedAssessment.status === 'healthy'
+                          ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                          : simulatedAssessment.status === 'warning'
+                          ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                          : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                      }`}
+                    >
+                      {simulatedAssessment.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
+                    <span>⚡ Elec: <strong className="text-slate-200">{simulatedAssessment.subsystems.electrical.score}%</strong></span>
+                    <span>🌡️ Therm: <strong className="text-slate-200">{simulatedAssessment.subsystems.thermal.score}%</strong></span>
+                    <span>📳 Mech: <strong className="text-slate-200">{simulatedAssessment.subsystems.mechanical.score}%</strong></span>
+                    <span>⚙️ Proc: <strong className="text-slate-200">{simulatedAssessment.subsystems.process.score}%</strong></span>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-200 font-medium leading-relaxed">
-                  {currentParamObj.benchmark}
-                </p>
-                {currentParamObj.lastUpdatedBy && (
-                  <p className="text-[10px] text-slate-400 pt-1 border-t border-cyan-900/40">
-                    Last recorded by:{' '}
-                    <strong className="text-slate-300">{currentParamObj.lastUpdatedBy.name}</strong>{' '}
-                    ({currentParamObj.lastUpdatedBy.designation}) on {currentParamObj.lastUpdated}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
 
-            {/* Measured Value Input */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Measured / Observed Value <span className="text-cyan-400">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g., 615V DC, Ripple 2.1V / 58.2°C / Class 1 Sparking"
-                value={measuredValue}
-                onChange={(e) => setMeasuredValue(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
-              />
+              {/* Parameter Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Select Equipment Health Parameter
+                </label>
+                <select
+                  value={selectedParamId}
+                  onChange={(e) => handleSelectParam(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
+                >
+                  {(equipment.parameters || []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      [{p.priority}] {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Standard Target / Benchmark Reference Box */}
               {currentParamObj && (
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-slate-500">Quick Presets:</span>
-                  {currentParamObj.unit && (
+                <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-800/50 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-cyan-300 flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5" />
+                      Standard Benchmark Specification
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        currentParamObj.priority === 'High Priority'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                      }`}
+                    >
+                      {currentParamObj.priority}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-200 font-medium leading-relaxed">
+                    {currentParamObj.benchmark}
+                  </p>
+                  {currentParamObj.lastUpdatedBy && (
+                    <p className="text-[10px] text-slate-400 pt-1 border-t border-cyan-900/40">
+                      Last recorded by:{' '}
+                      <strong className="text-slate-300">{currentParamObj.lastUpdatedBy.name}</strong>{' '}
+                      ({currentParamObj.lastUpdatedBy.designation}) on {currentParamObj.lastUpdated}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Measured Value Input */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Measured / Observed Value <span className="text-cyan-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., 615V DC, Ripple 2.1V / 58.2°C / Class 1 Sparking"
+                  value={measuredValue}
+                  onChange={(e) => setMeasuredValue(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
+                />
+                {currentParamObj && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="text-[10px] text-slate-500">Quick Presets:</span>
+                    {currentParamObj.unit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!measuredValue.includes(currentParamObj.unit!)) {
+                            setMeasuredValue((prev) => (prev ? `${prev} ${currentParamObj.unit}` : `Nominal ${currentParamObj.unit}`));
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono transition"
+                      >
+                        + {currentParamObj.unit}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
-                        if (!measuredValue.includes(currentParamObj.unit!)) {
-                          setMeasuredValue((prev) => (prev ? `${prev} ${currentParamObj.unit}` : `Nominal ${currentParamObj.unit}`));
-                        }
+                        setMeasuredValue('Nominal in-spec');
+                        setStatus('healthy');
                       }}
-                      className="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono transition"
+                      className="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 transition"
                     >
-                      + {currentParamObj.unit}
+                      Nominal in-spec
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus('warning');
+                        setNotes('Elevated reading observed during shift walkdown');
+                      }}
+                      className="px-2 py-0.5 rounded text-[10px] bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border border-amber-800/40 transition"
+                    >
+                      Elevated Warning
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Condition / Status Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Observed Equipment Condition
+                </label>
+                <div className="grid grid-cols-3 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => {
-                      setMeasuredValue('Nominal in-spec');
-                      setStatus('healthy');
-                    }}
-                    className="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 transition"
+                    onClick={() => setStatus('healthy')}
+                    className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center transition ${
+                      status === 'healthy'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 ring-2 ring-emerald-500/30'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
                   >
-                    Nominal in-spec
+                    <CheckCircle2 className="w-4 h-4 mb-1 text-emerald-400" />
+                    <span>Normal / Healthy</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => {
-                      setStatus('warning');
-                      setNotes('Elevated reading observed during shift walkdown');
-                    }}
-                    className="px-2 py-0.5 rounded text-[10px] bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border border-amber-800/40 transition"
+                    onClick={() => setStatus('warning')}
+                    className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center transition ${
+                      status === 'warning'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 ring-2 ring-amber-500/30'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
                   >
-                    Elevated Warning
+                    <AlertTriangle className="w-4 h-4 mb-1 text-amber-400" />
+                    <span>Warning / Alert</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatus('critical')}
+                    className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center transition ${
+                      status === 'critical'
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 ring-2 ring-rose-500/30'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <AlertOctagon className="w-4 h-4 mb-1 text-rose-400" />
+                    <span>Critical Fault</span>
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Condition / Status Selection */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Observed Equipment Condition
-              </label>
-              <div className="grid grid-cols-3 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setStatus('healthy')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center transition ${
-                    status === 'healthy'
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 ring-2 ring-emerald-500/30'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  <CheckCircle2 className="w-4 h-4 mb-1 text-emerald-400" />
-                  <span>Normal / Healthy</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStatus('warning')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center transition ${
-                    status === 'warning'
-                      ? 'bg-amber-500/20 border-amber-500 text-amber-300 ring-2 ring-amber-500/30'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  <AlertTriangle className="w-4 h-4 mb-1 text-amber-400" />
-                  <span>Warning / Alert</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStatus('critical')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center transition ${
-                    status === 'critical'
-                      ? 'bg-rose-500/20 border-rose-500 text-rose-300 ring-2 ring-rose-500/30'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  <AlertOctagon className="w-4 h-4 mb-1 text-rose-400" />
-                  <span>Critical Fault</span>
-                </button>
+              {/* Technician Remarks */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Inspection Remarks & Sensory Findings (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Mention thermography readings, audible noise, vibration feel, or maintenance actions taken..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 leading-relaxed"
+                ></textarea>
               </div>
             </div>
 
-            {/* Technician Remarks */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Inspection Remarks & Sensory Findings (Optional)
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Mention thermography readings, audible noise, vibration feel, or maintenance actions taken..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 leading-relaxed"
-              ></textarea>
-            </div>
-
-            {/* Footer Buttons */}
-            <div className="pt-2 flex items-center justify-end space-x-3 border-t border-slate-800/80">
+            {/* Footer Buttons - Fixed & Pinned */}
+            <div className="px-6 py-3.5 bg-slate-950/90 border-t border-slate-800/80 flex items-center justify-end space-x-3 shrink-0">
               <button
                 type="button"
                 onClick={closeManualInputModal}
@@ -479,97 +482,99 @@ export const ManualParameterInputModal: React.FC = () => {
 
         {/* Mode 2: Full Shift Checklist (Batch Input) */}
         {mode === 'batch' && (
-          <form onSubmit={handleBatchSubmit} className="p-6 space-y-4">
-            <p className="text-xs text-slate-400">
-              Inspect and record readings for all parameters of this equipment during your shift walk-down.
-            </p>
+          <form onSubmit={handleBatchSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="p-6 space-y-3 flex-1 overflow-y-auto pr-3">
+              <p className="text-xs text-slate-400">
+                Inspect and record readings for all parameters of this equipment during your shift walk-down.
+              </p>
 
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-              {(equipment.parameters || []).map((p) => {
-                const currentData = batchData[p.id] || { value: '', status: 'healthy', notes: '' };
-                return (
-                  <div
-                    key={p.id}
-                    className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/90 space-y-2.5 transition hover:border-slate-700"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-1.5">
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                            p.priority === 'High Priority'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                              : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                          }`}
-                        >
-                          {p.priority === 'High Priority' ? 'High' : 'PM'}
-                        </span>
-                        <span className="font-bold text-xs text-white">{p.name}</span>
+              <div className="space-y-3 pr-1">
+                {(equipment.parameters || []).map((p) => {
+                  const currentData = batchData[p.id] || { value: '', status: 'healthy', notes: '' };
+                  return (
+                    <div
+                      key={p.id}
+                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/90 space-y-2.5 transition hover:border-slate-700"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                              p.priority === 'High Priority'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                            }`}
+                          >
+                            {p.priority === 'High Priority' ? 'High' : 'PM'}
+                          </span>
+                          <span className="font-bold text-xs text-white">{p.name}</span>
+                        </div>
+
+                        <div className="flex items-center space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => updateBatchRow(p.id, 'status', 'healthy')}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              currentData.status === 'healthy'
+                                ? 'bg-emerald-500 text-slate-950'
+                                : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            Normal
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateBatchRow(p.id, 'status', 'warning')}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              currentData.status === 'warning'
+                                ? 'bg-amber-500 text-slate-950'
+                                : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            Warn
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateBatchRow(p.id, 'status', 'critical')}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              currentData.status === 'critical'
+                                ? 'bg-rose-500 text-white'
+                                : 'bg-slate-900 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            Crit
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex items-center space-x-1">
-                        <button
-                          type="button"
-                          onClick={() => updateBatchRow(p.id, 'status', 'healthy')}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            currentData.status === 'healthy'
-                              ? 'bg-emerald-500 text-slate-950'
-                              : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Normal
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateBatchRow(p.id, 'status', 'warning')}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            currentData.status === 'warning'
-                              ? 'bg-amber-500 text-slate-950'
-                              : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Warn
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateBatchRow(p.id, 'status', 'critical')}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            currentData.status === 'critical'
-                              ? 'bg-rose-500 text-white'
-                              : 'bg-slate-900 text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Crit
-                        </button>
+                      <div className="text-[11px] text-cyan-300/80 bg-cyan-950/30 px-2.5 py-1 rounded border border-cyan-900/40">
+                        Standard: <span className="text-slate-200">{p.benchmark}</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Measured value (e.g. 58°C)..."
+                          value={currentData.value}
+                          onChange={(e) => updateBatchRow(p.id, 'value', e.target.value)}
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Remarks / observations..."
+                          value={currentData.notes}
+                          onChange={(e) => updateBatchRow(p.id, 'notes', e.target.value)}
+                          className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                        />
                       </div>
                     </div>
-
-                    <div className="text-[11px] text-cyan-300/80 bg-cyan-950/30 px-2.5 py-1 rounded border border-cyan-900/40">
-                      Standard: <span className="text-slate-200">{p.benchmark}</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Measured value (e.g. 58°C)..."
-                        value={currentData.value}
-                        onChange={(e) => updateBatchRow(p.id, 'value', e.target.value)}
-                        className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Remarks / observations..."
-                        value={currentData.notes}
-                        onChange={(e) => updateBatchRow(p.id, 'notes', e.target.value)}
-                        className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Footer Buttons */}
-            <div className="pt-2 flex items-center justify-end space-x-3 border-t border-slate-800/80">
+            {/* Footer Buttons - Fixed & Pinned */}
+            <div className="px-6 py-3.5 bg-slate-950/90 border-t border-slate-800/80 flex items-center justify-end space-x-3 shrink-0">
               <button
                 type="button"
                 onClick={closeManualInputModal}

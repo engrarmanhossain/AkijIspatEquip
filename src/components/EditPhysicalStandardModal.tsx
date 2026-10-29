@@ -224,10 +224,10 @@ export const EditPhysicalStandardModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-950/80 border-b border-slate-800/80">
+        <div className="flex items-center justify-between px-6 py-3.5 bg-slate-950/90 border-b border-slate-800/80 shrink-0">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
               <Sliders className="w-5 h-5" />
@@ -254,7 +254,7 @@ export const EditPhysicalStandardModal: React.FC = () => {
         </div>
 
         {/* Management Auditor Chip */}
-        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between text-xs">
+        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/60 flex items-center justify-between text-xs shrink-0">
           <div className="flex items-center space-x-2 text-slate-300">
             <Shield className="w-4 h-4 text-emerald-400" />
             <span>
@@ -269,7 +269,7 @@ export const EditPhysicalStandardModal: React.FC = () => {
         </div>
 
         {/* Tab Selection */}
-        <div className="px-6 pt-3 pb-1 flex border-b border-slate-800/80 space-x-2">
+        <div className="px-6 pt-3 pb-1 flex border-b border-slate-800/80 space-x-2 shrink-0 bg-slate-900/95">
           <button
             type="button"
             onClick={() => setActiveSubTab('physical')}
@@ -299,7 +299,7 @@ export const EditPhysicalStandardModal: React.FC = () => {
 
         {feedbackMsg && (
           <div
-            className={`mx-6 mt-4 p-3 rounded-xl text-xs flex items-center space-x-2 animate-in fade-in ${
+            className={`mx-6 mt-3 p-3 rounded-xl text-xs flex items-center space-x-2 shrink-0 animate-in fade-in ${
               feedbackMsg.type === 'success'
                 ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300'
                 : 'bg-rose-500/20 border border-rose-500/40 text-rose-300'
@@ -314,10 +314,10 @@ export const EditPhysicalStandardModal: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSaveAll} className="p-6 space-y-5">
+        <form onSubmit={handleSaveAll} className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* TAB 1: PHYSICAL DATA */}
           {activeSubTab === 'physical' && (
-            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto pr-3">
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400">
                 Physical metadata describes the machine name, tag, location, ratings, operating hours, and plant application.
               </div>
@@ -500,7 +500,7 @@ export const EditPhysicalStandardModal: React.FC = () => {
 
           {/* TAB 2: STANDARD BENCHMARKS DATA */}
           {activeSubTab === 'standard' && (
-            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto pr-3">
               <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400">
                 Standard benchmarks define target operational limits, baseline safety thresholds, and priority classifications.
                 Only Management can edit these benchmarks to prevent unauthorized baseline alterations.
@@ -630,8 +630,8 @@ export const EditPhysicalStandardModal: React.FC = () => {
             </div>
           )}
 
-          {/* Footer Save Buttons */}
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+          {/* Footer Save Buttons - Fixed & Pinned */}
+          <div className="px-6 py-3.5 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between shrink-0">
             <div className="text-[11px] text-slate-400">
               Only Management changes will calibrate fleet telemetry targets.
             </div>
