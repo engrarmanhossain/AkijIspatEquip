@@ -170,6 +170,113 @@
 }
 
 /* ==========================================================================
+   Dark Neumorphic (Soft UI) Design System
+   ========================================================================== */
+.neu-dark-bg {
+  background-color: #0f141f;
+}
+
+/* Elevated Dark Soft Card */
+.neu-dark-card {
+  background: #141926;
+  box-shadow: 
+    18px 18px 40px #080b12,
+    -18px -18px 40px #20273c;
+}
+
+/* Circular Raised Element in Dark Mode */
+.neu-dark-badge-raised {
+  background: #141926;
+  box-shadow: 
+    8px 8px 18px #080b12,
+    -8px -8px 18px #20273c;
+}
+
+/* Deep Inset / Concave Groove (Dark Inputs) */
+.neu-dark-groove-inset {
+  background: #141926;
+  box-shadow: 
+    inset 4px 4px 8px #080b12,
+    inset -4px -4px 8px #20273c;
+  transition: all 0.25s ease;
+}
+
+.neu-dark-groove-inset:focus-within {
+  box-shadow: 
+    inset 5px 5px 10px #07090e,
+    inset -5px -5px 10px #232a40,
+    0 0 0 1.5px rgba(6, 182, 212, 0.45);
+}
+
+/* Elevated Tactile Button in Dark Mode (LOGIN) */
+.neu-dark-button-raised {
+  background: #141926;
+  box-shadow: 
+    8px 8px 20px #080b12,
+    -8px -8px 20px #20273c;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-dark-button-raised:hover {
+  box-shadow: 
+    10px 10px 24px #06080d,
+    -10px -10px 24px #242c44;
+  transform: translateY(-1px);
+}
+
+.neu-dark-button-raised:active {
+  box-shadow: 
+    inset 4px 4px 8px #080b12,
+    inset -4px -4px 8px #20273c;
+  transform: translateY(1px);
+}
+
+/* Circular Soft Icon Button in Dark Mode */
+.neu-dark-circle-btn {
+  background: #141926;
+  box-shadow: 
+    5px 5px 12px #080b12,
+    -5px -5px 12px #20273c;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-dark-circle-btn:hover {
+  box-shadow: 
+    7px 7px 15px #06080d,
+    -7px -7px 15px #242c44;
+  transform: scale(1.06);
+}
+
+.neu-dark-circle-btn:active {
+  box-shadow: 
+    inset 3px 3px 6px #080b12,
+    inset -3px -3px 6px #20273c;
+  transform: scale(0.96);
+}
+
+/* Soft Checkbox in Dark Mode */
+.neu-dark-checkbox {
+  background: #141926;
+  box-shadow: 
+    inset 2px 2px 4px #080b12,
+    inset -2px -2px 4px #20273c;
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.neu-dark-checkbox:checked {
+  background: #06b6d4;
+  box-shadow: 
+    0 0 10px rgba(6, 182, 212, 0.4),
+    2px 2px 5px #080b12,
+    -2px -2px 5px #20273c;
+}
+
+/* ==========================================================================
    Modern Enterprise Dark Glassmorphic Design System
    ========================================================================== */
 .glass-panel {
