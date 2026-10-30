@@ -59,12 +59,23 @@ export function extractNumericValue(
     }
   }
 
-  // Fallback to first standalone numeric match
-  const match = text.match(/[-+]?\d*\.?\d+/);
-  if (match) {
-    const num = parseFloat(match[0]);
+  // If unitHint is provided, only accept standalone numeric match if the entire input is purely numeric
+  const trimmed = text.trim();
+  const rawNumMatch = trimmed.match(/^[-+]?\d+(?:\.\d+)?$/);
+  if (rawNumMatch) {
+    const num = parseFloat(rawNumMatch[0]);
     return isNaN(num) ? null : num;
   }
+
+  // If no unitHint was provided, fallback to first standalone number
+  if (!unitHint) {
+    const match = text.match(/[-+]?\d*\.?\d+/);
+    if (match) {
+      const num = parseFloat(match[0]);
+      return isNaN(num) ? null : num;
+    }
+  }
+
   return null;
 }
 
@@ -224,16 +235,19 @@ export function synchronizeTelemetryFromParameters(
   const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   parameters.forEach((param) => {
-    const lowerName = param.name.toLowerCase();
-    const lowerUnit = (param.unit || '').toLowerCase();
+    const lowerName = (param.name || '').toLowerCase();
 
-    // Voltage sync
-    if (
-      (lowerName.includes('voltage') || lowerName.includes('bus') || lowerUnit.includes('v')) &&
-      !lowerName.includes('vibration') &&
-      !lowerUnit.includes('mm/s') &&
-      updated.voltage
-    ) {
+    // 1. Voltage channel sync (target electrical voltage parameters)
+    const isVoltageParam =
+      param.id === 'vfd-p1' ||
+      param.id === 'plc-p3' ||
+      (/\b(voltage|supply voltage|bus voltage|line voltage)\b/i.test(lowerName) &&
+        !lowerName.includes('vibration') &&
+        !lowerName.includes('unbalance') &&
+        !lowerName.includes('fan') &&
+        !lowerName.includes('heater'));
+
+    if (isVoltageParam && updated.voltage) {
       const val = extractNumericValue(param.currentValue, 'voltage');
       if (val !== null) {
         const history = [...(updated.voltage.history || []).slice(1), { timestamp: nowTime, val }];
@@ -241,29 +255,45 @@ export function synchronizeTelemetryFromParameters(
       }
     }
 
-    // Current sync
-    if (
-      (lowerName.includes('current') || lowerUnit.includes('a') || lowerUnit.includes('amp')) &&
-      !lowerName.includes('voltage')
-    ) {
+    // 2. Current channel sync (target main drive/motor load current parameters)
+    const isCurrentParam =
+      param.id === 'vfd-p3' ||
+      param.id === 'dcdrv-p1' ||
+      (/\b(current|phase current|load current|operating current|armature current|rack load current)\b/i.test(lowerName) &&
+        !lowerName.includes('voltage') &&
+        !lowerName.includes('fan') &&
+        !lowerName.includes('heater') &&
+        !lowerName.includes('unbalance'));
+
+    if (isCurrentParam) {
       const val = extractNumericValue(param.currentValue, 'current');
       if (val !== null) {
         if (updated.current) {
           const history = [...(updated.current.history || []).slice(1), { timestamp: nowTime, val }];
           updated.current = { ...updated.current, value: val, history };
         }
-        if (updated.motorLoad && !updated.current) {
+        if (updated.motorLoad) {
           const history = [...(updated.motorLoad.history || []).slice(1), { timestamp: nowTime, val }];
           updated.motorLoad = { ...updated.motorLoad, value: val, history };
         }
       }
     }
 
-    // Temperature sync
-    if (
-      (lowerName.includes('temp') || lowerName.includes('oti') || lowerName.includes('wti') || lowerUnit.includes('°c')) &&
-      updated.temperature
-    ) {
+    // 3. Temperature channel sync (target main bearing/winding/heatsink/oil temperatures)
+    const isTempParam =
+      param.id === 'vfd-p2' ||
+      param.id === 'xfr-p1' ||
+      param.id === 'pump-p2' ||
+      param.id === 'comp-p1' ||
+      param.id === 'cnc-p2' ||
+      param.id === 'acmtr-p1' ||
+      (/\b(temp|temperature|heatsink|oti|wti)\b/i.test(lowerName) &&
+        !lowerName.includes('braking') &&
+        !lowerName.includes('harmonic') &&
+        !lowerName.includes('cooler') &&
+        !lowerName.includes('resistor'));
+
+    if (isTempParam && updated.temperature) {
       const val = extractNumericValue(param.currentValue, 'temperature');
       if (val !== null) {
         const history = [...(updated.temperature.history || []).slice(1), { timestamp: nowTime, val }];
@@ -271,11 +301,17 @@ export function synchronizeTelemetryFromParameters(
       }
     }
 
-    // Vibration sync
-    if (
-      (lowerName.includes('vibration') || lowerUnit.includes('mm/s')) &&
-      updated.vibration
-    ) {
+    // 4. Vibration channel sync (target mechanical vibration parameters)
+    const isVibrationParam =
+      param.id === 'pump-p1' ||
+      param.id === 'cnc-p1' ||
+      param.id === 'cvr-p1' ||
+      param.id === 'mtr-p1' ||
+      param.id === 'acmtr-p1' ||
+      (/\b(vibration|rms vibration|bearing vibration)\b/i.test(lowerName) &&
+        !lowerName.includes('voltage'));
+
+    if (isVibrationParam && updated.vibration) {
       const val = extractNumericValue(param.currentValue, 'vibration');
       if (val !== null) {
         const history = [...(updated.vibration.history || []).slice(1), { timestamp: nowTime, val }];
@@ -283,11 +319,15 @@ export function synchronizeTelemetryFromParameters(
       }
     }
 
-    // Pressure sync
-    if (
-      (lowerName.includes('pressure') || lowerUnit.includes('bar') || lowerUnit.includes('pa')) &&
-      updated.pressure
-    ) {
+    // 5. Pressure channel sync (target hydraulic/discharge/network air pressure)
+    const isPressureParam =
+      param.id === 'pump-p3' ||
+      param.id === 'hyd-p1' ||
+      param.id === 'sns-p1' ||
+      (/\b(pressure|ram clamping|fluid pressure|discharge pressure)\b/i.test(lowerName) &&
+        !lowerName.includes('diff'));
+
+    if (isPressureParam && updated.pressure) {
       const val = extractNumericValue(param.currentValue, 'pressure');
       if (val !== null) {
         const history = [...(updated.pressure.history || []).slice(1), { timestamp: nowTime, val }];

@@ -100,11 +100,22 @@ export default async function handler(req: any, res: any) {
         mergedCompanySettings.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/';
       }
 
+      // Merge parameter input logs (keep unique by id, sort newest first)
+      let mergedLogs = existing.parameterInputLogs || [];
+      if (incoming.parameterInputLogs && Array.isArray(incoming.parameterInputLogs)) {
+        const existingMap = new Map((existing.parameterInputLogs || []).map((l: any) => [l.id, l]));
+        incoming.parameterInputLogs.forEach((l: any) => existingMap.set(l.id, l));
+        mergedLogs = Array.from(existingMap.values()).sort(
+          (a: any, b: any) => (b.timestamp || '').localeCompare(a.timestamp || '')
+        );
+      }
+
       const merged = {
         ...existing,
         ...incoming,
         companySettings: mergedCompanySettings,
         employees: mergedEmployees.length > 0 ? mergedEmployees : existing.employees,
+        parameterInputLogs: mergedLogs.length > 0 ? mergedLogs : existing.parameterInputLogs,
         lastSyncedAt: new Date().toISOString(),
       };
 

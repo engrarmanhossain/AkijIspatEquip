@@ -424,7 +424,33 @@ export const OverviewTab: React.FC = () => {
 
                     {/* Latest Manual Parameter Inspection Strip */}
                     {(() => {
-                      const latestLog = (parameterInputLogs || []).find((l) => l.equipmentId === eq.id);
+                      const latestLog = (() => {
+                        const eqLogs = (parameterInputLogs || [])
+                          .filter((l) => l.equipmentId === eq.id)
+                          .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+                        if (eqLogs.length > 0) return eqLogs[0];
+
+                        const paramsWithUpdates = (eq.parameters || [])
+                          .filter((p) => p.lastUpdated)
+                          .sort((a, b) => (b.lastUpdated || '').localeCompare(a.lastUpdated || ''));
+                        if (paramsWithUpdates.length > 0) {
+                          const p = paramsWithUpdates[0];
+                          return {
+                            id: p.id,
+                            parameterId: p.id,
+                            parameterName: p.name,
+                            equipmentId: eq.id,
+                            equipmentName: eq.name,
+                            timestamp: p.lastUpdated || '',
+                            value: p.currentValue,
+                            status: p.status,
+                            notes: p.notes,
+                            inputBy: p.lastUpdatedBy,
+                          };
+                        }
+                        return null;
+                      })();
+
                       if (latestLog) {
                         return (
                           <div className="mt-3 p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs space-y-1">

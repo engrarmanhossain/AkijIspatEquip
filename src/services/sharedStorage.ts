@@ -96,11 +96,22 @@ async function saveToCloudStore(partial: Partial<SharedStoreData>): Promise<bool
       mergedCompanySettings.googleSpreadsheetUrl = 'https://docs.google.com/spreadsheets/';
     }
 
+    // Merge parameter input logs (keep unique by id, sort newest first)
+    let mergedLogs = existing.parameterInputLogs || [];
+    if (partial.parameterInputLogs && Array.isArray(partial.parameterInputLogs)) {
+      const existingMap = new Map((existing.parameterInputLogs || []).map((l) => [l.id, l]));
+      partial.parameterInputLogs.forEach((l) => existingMap.set(l.id, l));
+      mergedLogs = Array.from(existingMap.values()).sort(
+        (a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')
+      );
+    }
+
     const mergedData: SharedStoreData = {
       ...existing,
       ...partial,
       companySettings: mergedCompanySettings,
       employees: mergedEmployees.length > 0 ? mergedEmployees : existing.employees,
+      parameterInputLogs: mergedLogs.length > 0 ? mergedLogs : existing.parameterInputLogs,
       lastSyncedAt: new Date().toISOString(),
     };
 

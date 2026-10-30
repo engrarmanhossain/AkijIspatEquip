@@ -160,39 +160,47 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           // Equipment health score & status strictly derived from manual parameter update data!
           const assessment = calculateEquipmentHealth(raw.parameters);
+          const syncedTelemetry = synchronizeTelemetryFromParameters(raw.telemetry, raw.parameters || []);
           const status = raw.status === 'maintenance' || raw.status === 'offline' ? raw.status : assessment.status;
           return {
             ...raw,
             healthScore: assessment.healthScore,
             status,
+            telemetry: syncedTelemetry,
           };
         });
         const existingIds = new Set(merged.map((e) => e.id));
         const missing = INITIAL_EQUIPMENT.filter((e) => !existingIds.has(e.id)).map((eq) => {
           const assessment = calculateEquipmentHealth(eq.parameters);
+          const syncedTelemetry = synchronizeTelemetryFromParameters(eq.telemetry, eq.parameters || []);
           return {
             ...eq,
             healthScore: assessment.healthScore,
             status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
+            telemetry: syncedTelemetry,
           };
         });
         return [...merged, ...missing];
       }
       return INITIAL_EQUIPMENT.map((eq) => {
         const assessment = calculateEquipmentHealth(eq.parameters);
+        const syncedTelemetry = synchronizeTelemetryFromParameters(eq.telemetry, eq.parameters || []);
         return {
           ...eq,
           healthScore: assessment.healthScore,
           status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
+          telemetry: syncedTelemetry,
         };
       });
     } catch {
       return INITIAL_EQUIPMENT.map((eq) => {
         const assessment = calculateEquipmentHealth(eq.parameters);
+        const syncedTelemetry = synchronizeTelemetryFromParameters(eq.telemetry, eq.parameters || []);
         return {
           ...eq,
           healthScore: assessment.healthScore,
           status: eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status,
+          telemetry: syncedTelemetry,
         };
       });
     }
@@ -205,11 +213,17 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const parsed: ParameterInputLog[] = JSON.parse(saved);
         const existingIds = new Set(parsed.map((l) => l.id));
         const missing = INITIAL_PARAMETER_INPUT_LOGS.filter((l) => !existingIds.has(l.id));
-        return [...parsed, ...missing];
+        return [...parsed, ...missing].sort(
+          (a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')
+        );
       }
-      return INITIAL_PARAMETER_INPUT_LOGS;
+      return [...INITIAL_PARAMETER_INPUT_LOGS].sort(
+        (a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')
+      );
     } catch {
-      return INITIAL_PARAMETER_INPUT_LOGS;
+      return [...INITIAL_PARAMETER_INPUT_LOGS].sort(
+        (a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')
+      );
     }
   });
 
@@ -381,15 +395,29 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         if (shared.equipmentList && Array.isArray(shared.equipmentList) && shared.equipmentList.length > 0) {
           setEquipmentList((prev) => {
-            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.equipmentList);
-            return hasChanged ? shared.equipmentList! : prev;
+            const syncedList = shared.equipmentList!.map((eq) => {
+              const assessment = calculateEquipmentHealth(eq.parameters);
+              const syncedTelemetry = synchronizeTelemetryFromParameters(eq.telemetry, eq.parameters || []);
+              const status = eq.status === 'maintenance' || eq.status === 'offline' ? eq.status : assessment.status;
+              return {
+                ...eq,
+                healthScore: assessment.healthScore,
+                status,
+                telemetry: syncedTelemetry,
+              };
+            });
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(syncedList);
+            return hasChanged ? syncedList : prev;
           });
         }
 
         if (shared.parameterInputLogs && Array.isArray(shared.parameterInputLogs) && shared.parameterInputLogs.length > 0) {
           setParameterInputLogs((prev) => {
-            const hasChanged = JSON.stringify(prev) !== JSON.stringify(shared.parameterInputLogs);
-            return hasChanged ? shared.parameterInputLogs! : prev;
+            const sorted = [...shared.parameterInputLogs!].sort(
+              (a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')
+            );
+            const hasChanged = JSON.stringify(prev) !== JSON.stringify(sorted);
+            return hasChanged ? sorted : prev;
           });
         }
 
